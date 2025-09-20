@@ -1,59 +1,36 @@
-# Enhanced Vite React TypeScript Template
+# 🚀 Enhanced Vite + React + TypeScript + Tailwind Starter
 
-This template includes built-in detection for missing CSS variables between your Tailwind config and CSS files.
+A modern, opinionated starter template that goes beyond the basics.  
+This setup is designed for **rapid development** with built-in tools that catch issues early, enforce best practices, and keep your UI consistent.  
 
-## Features
+✨ **Special Note**:  
+This starter was crafted **solely for the Next Generation of the Worship Team** — built to empower creativity, collaboration, and excellence in building tools for ministry and worship.
 
-- **CSS Variable Detection**: Automatically detects if CSS variables referenced in `tailwind.config.cjs` are defined in `src/index.css`
-- **Enhanced Linting**: Includes ESLint, Stylelint, and custom CSS variable validation
-- **Shadcn/ui**: Pre-configured with all Shadcn components
-- **Modern Stack**: Vite + React + TypeScript + Tailwind CSS
+---
 
-## Available Scripts
+## 🔑 Features
+
+- ⚡ **Modern Stack** – Vite for blazing-fast builds, React 18, and TypeScript for type safety.
+- 🎨 **Tailwind + Shadcn/ui** – Preconfigured with Tailwind CSS and Shadcn components for elegant, reusable UI.
+- 🛡️ **Smart Linting** – ESLint + Stylelint ensure clean, maintainable code across JS/TS and CSS.
+- 🔍 **CSS Variable Guardrails** – Unique detection script that verifies all `var(--variable)` references in `tailwind.config.cjs` exist in `src/index.css`.  
+  → No more undefined variables breaking your UI.
+- ✅ **Seamless Dev Experience** – One command to lint code style **and** check CSS variables before pushing changes.
+
+---
+
+## 📦 Getting Started
 
 ```bash
-# Run all linting (includes CSS variable check)
-npm run lint
+# 1. Clone the repository
+git clone https://github.com/your-username/your-repo-name.git
+cd your-repo-name
 
-# Check only CSS variables
-npm run check:css-vars
+# 2. Install dependencies
+npm install
 
-# Individual linting
-npm run lint:js    # ESLint
-npm run lint:css   # Stylelint
-```
+# 3. Start development server
+npm run dev
 
-## CSS Variable Detection
-
-The template includes a custom script that:
-
-1. **Parses `tailwind.config.cjs`** to find all `var(--variable)` references
-2. **Parses `src/index.css`** to find all defined CSS variables (`--variable:`)
-3. **Cross-references** them to find missing definitions
-4. **Reports undefined variables** with clear error messages
-
-### Example Output
-
-When CSS variables are missing:
-```
-❌ Undefined CSS variables found in tailwind.config.cjs:
-   --sidebar-background
-   --sidebar-foreground
-   --sidebar-primary
-
-Add these variables to src/index.css
-```
-
-When all variables are defined:
-```
-✅ All CSS variables in tailwind.config.cjs are defined
-```
-
-## How It Works
-
-The detection happens during the `npm run lint` command, which will:
-- Exit with error code 1 if undefined variables are found
-- Show exactly which variables need to be added to your CSS file
-- Integrate seamlessly with your development workflow
-
-This prevents runtime CSS issues where Tailwind classes reference undefined CSS variables.
+# 4. Build for production
+npm run build

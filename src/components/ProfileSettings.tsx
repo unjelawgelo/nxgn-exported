@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { blink } from '../blink/client'
+// File upload will be handled via base64
 import { User } from '../App'
 import { Camera, LogOut, Tag, Save, Edit } from 'lucide-react'
 import { resizeImage } from '../lib/imageUtils'
@@ -46,19 +46,31 @@ export default function ProfileSettings({ user, onLogout, onUserUpdate }: Profil
     const file = event.target.files?.[0]
     if (!file) return
 
+    // Check if file is an image
+    if (!file.type.startsWith('image/')) {
+      notifications.showError('Invalid file type', 'Please upload an image file')
+      return
+    }
+
     setLoading(true)
     try {
+      // Resize image first
       const resized = await resizeImage(file, 1024)
-      const { publicUrl } = await blink.storage.upload(
-        resized,
-        `profiles/${user.id}-${Date.now()}.${file.name.split('.').pop()}`,
-        { upsert: true }
-      )
-
-      setProfilePhoto(publicUrl)
+      
+      // Convert to base64
+      const reader = new FileReader()
+      reader.readAsDataURL(resized)
+      
+      await new Promise((resolve, reject) => {
+        reader.onload = () => {
+          setProfilePhoto(reader.result as string)
+          resolve(null)
+        }
+        reader.onerror = (error) => reject(error)
+      })
     } catch (err) {
-      console.error('Failed to upload photo:', err)
-      notifications.showError('Upload failed', 'Failed to upload photo. Please try again.')
+      console.error('Failed to process photo:', err)
+      notifications.showError('Upload failed', 'Failed to process photo. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -85,33 +97,18 @@ export default function ProfileSettings({ user, onLogout, onUserUpdate }: Profil
         intendedPayload.availability = availability ?? null
       }
 
-      // Fetch existing user record to determine which fields actually exist in DB (returned as camelCase)
-      const existing = await blink.db.users.list({ where: { id: user.id }, limit: 1 })
-      const existingKeys = existing && existing.length > 0 ? Object.keys(existing[0] as any) : []
+      // Since we're not using the backend, we'll use all intended fields
+      const safePayload = { ...intendedPayload }
 
-      // Build a safe payload including only keys present in the existing record
-      const safePayload: any = {}
-      for (const key of Object.keys(intendedPayload)) {
-        if (existingKeys.includes(key)) {
-          safePayload[key] = intendedPayload[key]
-        }
-      }
-
-      // If nothing matched (very rare), fall back to updating only the name
-      if (Object.keys(safePayload).length === 0) {
-        safePayload.name = intendedPayload.name
-      }
-
-      // Perform the update
-      await blink.db.users.update(user.id, safePayload)
-
-      // Update local copy
+      // For demo purposes, we'll just update the local state
+      // In a real app, you would send this to your backend API
       const updatedUser = {
         ...user,
         ...safePayload
       }
 
       // Notify parent to update app state; fall back to localStorage if not provided
+      // This ensures the UI updates with the new profile photo
       if (onUserUpdate) {
         onUserUpdate(updatedUser)
       } else {

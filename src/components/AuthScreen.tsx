@@ -212,7 +212,8 @@ export default function AuthScreen({ onLogin }: AuthScreenProps) {
     return (
       <div className="h-screen w-full bg-background flex items-center justify-center p-4 animate-auth-entry">
         <div className="fixed top-4 right-4 z-50">
-          <Button variant="ghost" onClick={() => { window.open('/nxgn-export.zip', '_blank') }} className="px-3 py-2 text-sm">Download Code</Button>
+          {/* Hide the download code button */}
+          {/* <Button variant="ghost" onClick={() => { window.open('/nxgn-export.zip', '_blank') }} className="px-3 py-2 text-sm">Download Code</Button> */}
         </div>
         <div className="w-full max-w-md fade-in">
           <div className="text-center mb-8">

@@ -1,0 +1,547 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* NXGN Dark Theme Colors */
+    --background: 240 3% 4%;
+    --foreground: 0 0% 98%;
+    --card: 240 4% 8%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 4% 8%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 216 90% 56%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 4% 12%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 4% 16%;
+    --muted-foreground: 240 5% 65%;
+    --accent: 216 90% 56%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 4% 16%;
+    --input: 240 4% 16%;
+    --ring: 216 90% 56%;
+
+    /* Charts */
+    --chart-1: 258 90% 66%;
+    --chart-2: 270 95% 75%;
+    --chart-3: 280 100% 70%;
+    --chart-4: 290 85% 65%;
+    --chart-5: 300 90% 60%;
+
+    /* Sidebar */
+    --sidebar: 240 4% 8%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 258 90% 66%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 4% 16%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 4% 16%;
+    --sidebar-ring: 258 90% 66%;
+
+    /* Fonts */
+    --font-sans: Inter, sans-serif;
+    --font-serif: Inter Tight, serif;
+    --font-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+
+    /* Shadows */
+    --shadow-2xs: 0px 4px 8px -1px hsl(0 0% 0% / 0.05);
+    --shadow-xs: 0px 4px 8px -1px hsl(0 0% 0% / 0.05);
+    --shadow-sm: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 1px 2px -2px hsl(0 0% 0% / 0.10);
+    --shadow: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 1px 2px -2px hsl(0 0% 0% / 0.10);
+    --shadow-md: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 2px 4px -2px hsl(0 0% 0% / 0.10);
+    --shadow-lg: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 4px 6px -2px hsl(0 0% 0% / 0.10);
+    --shadow-xl: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 8px 10px -2px hsl(0 0% 0% / 0.10);
+    --shadow-2xl: 0px 4px 8px -1px hsl(0 0% 0% / 0.25);
+
+    /* Misc */
+    --tracking-normal: 0em;
+    --spacing: 0.25rem;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* Same as root for dark mode */
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    letter-spacing: var(--tracking-normal);
+  }
+
+  /* NXGN Custom Animations */
+  .fade-in-out {
+    animation: fadeInOut 3s ease-in-out;
+  }
+  
+  .fade-in {
+    animation: fadeIn 0.6s ease-out;
+  }
+  
+  .slide-up {
+    animation: slideUp 0.4s ease-out;
+  }
+
+  /* NXGN logo base (pure white) */
+  .nxgn-logo {
+    color: #ffffff !important;
+    filter: brightness(1) !important;
+    text-shadow: none !important;
+    /* Smoothly transition glow on/off */
+    transition: filter 1.6s ease, text-shadow 1.6s ease, opacity 1.6s ease;
+  }
+
+  /* Optional glow when present (reduced strength) */
+  .nxgn-logo.glow {
+    /* Slightly reduced brightness to make glow more subtle */
+    filter: brightness(1.12) !important;
+    /* Softer, lower-intensity shadows for a more restrained glow */
+    text-shadow: 0 0 8px rgba(255,255,255,0.9), 0 0 18px rgba(255,255,255,0.6), 0 0 32px rgba(255,255,255,0.35) !important;
+  }
+
+  /* NXGN Splash Screen Animations */
+  .letters-container {
+    display: inline-flex;
+    position: relative;
+  }
+
+  .letter {
+    display: inline-block;
+    position: relative;
+    opacity: 0;
+    transform: scale(0.5);
+    color: #ffffff; /* ensure pure white during splash */
+  }
+
+  .animate-letters-come-together .letter {
+    animation: letterComeIn 3s ease-out forwards;
+  }
+
+  .animate-letters-come-together .letter-n {
+    animation-delay: 0.15s;
+  }
+
+  .animate-letters-come-together .letter-x {
+    animation-delay: 0.45s;
+  }
+
+  .animate-letters-come-together .letter-g {
+    animation-delay: 0.75s;
+  }
+
+  .animate-letters-come-together .letter-n2 {
+    animation-delay: 1.05s;
+  }
+
+  .animate-letters-come-together .letter-dot {
+    animation-delay: 1.35s;
+  }
+
+  .animate-glow-pulse {
+    animation: glowPulse 2.5s ease-in-out;
+  }
+
+  .animate-fade-out {
+    animation: fadeOutSmooth 2s ease-in-out forwards;
+  }
+
+  /* New: steady letters and combined glow+fade animation for NXGN splash */
+  .steady-letters .letter {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .nxgn-splash {
+    font-size: clamp(88px, 20vw, 220px);
+    line-height: 0.9;
+    padding-left: clamp(12px, 6vw, 48px);
+    padding-right: clamp(12px, 6vw, 48px);
+    display: inline-block;
+    -webkit-font-smoothing: antialiased;
+    will-change: opacity, transform, text-shadow;
+    text-wrap: balance;
+    white-space: nowrap;
+  }
+
+  .nxgn-splash-subtitle {
+    margin-top: 0.6rem;
+    font-size: clamp(12px, 2.2vw, 18px);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: hsl(var(--foreground));
+    opacity: 0;
+    text-shadow: 0 0 6px hsla(0, 0%, 100%, 0.6);
+    display: block;
+    line-height: 1;
+    will-change: opacity, transform, text-shadow;
+    transform-origin: center;
+    /* Smooth fade-in slightly after logo, then fade out exactly with logo (same easing & timing) */
+    animation: subtitleFadeIn 0.8s ease-out 0.9s forwards, fadeOutSmooth 0.8s ease-in-out 2.4s forwards;
+  }
+
+  @keyframes subtitleFadeIn {
+    from { opacity: 0; transform: translateY(6px) blur(2px); }
+    to { opacity: 1; transform: translateY(0) blur(0); }
+  }
+  
+
+  .animate-glow-then-fade {
+    /* Fade in first, then strong glow, then gentle fade-out */
+    animation: fadeIn 0.6s ease-out forwards, glowPulse 1.8s ease-in-out 0.6s forwards, fadeOutSmooth 0.8s ease-in-out 2.4s forwards;
+  }
+
+  @keyframes letterComeIn {
+    0% { 
+      opacity: 0; 
+      transform: scale(0.5) translateY(-60px);
+    }
+    70% { 
+      opacity: 1; 
+      transform: scale(1.08) translateY(8px);
+    }
+    100% { 
+      opacity: 1; 
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  @keyframes glowPulse {
+    0%, 100% { 
+      /* Strong base glow */
+      text-shadow: 0 0 12px rgba(255, 255, 255, 0.85),
+                   0 0 36px rgba(255, 255,255, 0.6),
+                   0 0 72px rgba(255, 255, 255, 0.35);
+    }
+    50% { 
+      /* Peak bright and wide glow */
+      text-shadow: 0 0 48px rgba(255, 255, 255, 1),
+                   0 0 96px rgba(255, 255, 255, 0.9),
+                   0 0 140px rgba(255, 255, 255, 0.7),
+                   0 0 200px rgba(255, 255, 255, 0.45);
+    }
+  }
+
+  @keyframes fadeOutSmooth {
+    0% { 
+      opacity: 1; 
+      transform: scale(1);
+    }
+    100% { 
+      opacity: 0; 
+      transform: scale(0.95);
+    }
+  }
+  
+  @keyframes fadeInOut {
+    0% { opacity: 0; }
+    50% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Custom scrollbar styles */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+
+  .scrollbar-thumb-border {
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+
+  .scrollbar-track-transparent {
+    scrollbar-track-color: transparent;
+  }
+
+  /* Webkit browsers */
+  .scrollbar-thin::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+  }
+
+  .scrollbar-thumb-border::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+
+  .scrollbar-track-transparent::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /* Media queries for responsive scrolling */
+  /* Responsive horizontal scrolling helper */
+  .responsive-scroll-x {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Custom animations for intro page */
+  @keyframes glow {
+    0%, 100% {
+      text-shadow: 0 0 20px currentColor, 0 0 40px currentColor, 0 0 60px currentColor;
+    }
+    50% {
+      text-shadow: 0 0 30px currentColor, 0 0 60px currentColor, 0 0 90px currentColor;
+    }
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+      opacity: 0.4;
+    }
+    50% {
+      transform: translateY(-20px);
+      opacity: 0.8;
+    }
+  }
+
+  .animate-glow {
+    animation: glow 2s ease-in-out infinite;
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .bg-gradient-radial {
+    background: radial-gradient(circle, var(--tw-gradient-stops));
+  }
+
+  /* Minimal auth entry animation */
+  .animate-auth-entry {
+    animation: authEntry 420ms cubic-bezier(.2, .8, .2, 1) both;
+  }
+
+  @keyframes authEntry {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.995);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  /* Button loader (three-dot pulse) */
+  .loader-dots {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    vertical-align: middle;
+    transition: opacity 200ms ease;
+  }
+  .loader-dots .dot {
+    width: 8px;
+    height: 8px;
+    background: hsl(var(--primary));
+    border-radius: 9999px;
+    opacity: 0.22;
+    transform: translateY(0);
+    animation: dotJump 900ms infinite ease-in-out;
+  }
+  .loader-dots .dot:nth-child(1) { animation-delay: 0ms; }
+  .loader-dots .dot:nth-child(2) { animation-delay: 120ms; }
+  .loader-dots .dot:nth-child(3) { animation-delay: 240ms; }
+  @keyframes dotJump {
+    0%, 80%, 100% { transform: translateY(0); opacity: 0.22; }
+    40% { transform: translateY(-6px); opacity: 1; }
+  }
+  .loading-label {
+    display: inline-block;
+    margin-left: 4px;
+    letter-spacing: 0.02em;
+  }
+
+  /* Hide native password reveal icons to avoid duplicate eye on NXGN login passcode input */
+  /* Edge / IE */
+  input[type="password"]::-ms-reveal,
+  input[type="password"]::-ms-clear {
+    display: none !important;
+  }
+
+  /* WebKit / Blink (Safari, Chrome) - various vendor pseudo-elements */
+  input[type="password"]::-webkit-textfield-decoration-container,
+  input[type="password"]::-webkit-password-toggle-button,
+  input[type="password"]::-webkit-credentials-auto-fill-button {
+    display: none !important;
+  }
+
+  /* Ensure consistent masking */
+  input[type="password"] {
+    -webkit-text-security: disc;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  /* Global: remove default blue focus/selection highlight for interactive elements */
+  :where(button, a, [role="button"], input, textarea, select, summary, [tabindex]):focus,
+  :where(button, a, [role="button"], input, textarea, select, summary, [tabindex]):focus-visible,
+  :where(button, a, [role="button"], input, textarea, select, summary, [tabindex]):active,
+  :where(button, a, [role="button"], input, textarea, select, summary, [tabindex]):hover {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Specifically target all button states to remove any background colors */
+  button:focus,
+  button:focus-visible,
+  button:active,
+  button:hover,
+  button[data-state="active"],
+  button[aria-selected="true"] {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Remove tap highlight on mobile browsers for interactive elements and prevent accidental text selection */
+  :where(button, a, [role="button"], [tabindex]) {
+    -webkit-tap-highlight-color: transparent !important;
+    -ms-touch-action: manipulation; /* improve touch responsiveness */
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+  }
+
+  /* Avoid text selection highlight on interactive elements */
+  :where(button, a, [role="button"], [tabindex])::selection {
+    background: transparent !important;
+    color: inherit !important;
+  }
+
+  /* Remove blue focus inner border in Firefox */
+  button::-moz-focus-inner,
+  input::-moz-focus-inner {
+    border: 0 !important;
+  }
+
+  /* Global selection: prevent brief blue selection flash when tapping/clicking */
+  ::selection {
+    background: transparent !important;
+    color: inherit !important;
+  }
+
+  /* Also globally ensure tap highlight is transparent (mobile) */
+  * {
+    -webkit-tap-highlight-color: transparent !important;
+  }
+
+  /* Specifically target navigation buttons and tabs to remove any blue highlighting */
+  [role="tab"],
+  [role="tab"]:focus,
+  [role="tab"]:focus-visible,
+  [role="tab"]:active,
+  [role="tab"]:hover,
+  [role="tablist"] button,
+  [role="tablist"] button:focus,
+  [role="tablist"] button:focus-visible,
+  [role="tablist"] button:active,
+  [role="tablist"] button:hover {
+    outline: none !important;
+    box-shadow: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+  }
+
+  /* Ensure no browser default colors on any Radix/shadcn components */
+  [data-radix-collection-item],
+  [data-radix-collection-item]:focus,
+  [data-radix-collection-item]:focus-visible,
+  [data-radix-collection-item]:active,
+  [data-radix-collection-item]:hover {
+    outline: none !important;
+    box-shadow: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+  }
+
+  /* Preserve hover for important CTAs despite global reset */
+  .preserve-hover {
+    -webkit-tap-highlight-color: transparent !important;
+    user-select: none !important;
+  }
+  /* Primary button preserve */
+  .preserve-hover.bg-primary,
+  .preserve-hover.bg-primary:hover,
+  .preserve-hover.bg-primary:focus,
+  .preserve-hover.bg-primary:active {
+    background-color: hsl(var(--primary)) !important;
+  }
+  .preserve-hover.text-primary-foreground,
+  .preserve-hover.text-primary-foreground:hover,
+  .preserve-hover.text-primary-foreground:focus,
+  .preserve-hover.text-primary-foreground:active {
+    color: hsl(var(--primary-foreground)) !important;
+  }
+  .preserve-hover:hover {
+    filter: brightness(0.95) !important;
+  }
+  .preserve-hover:active {
+    transform: translateY(0.5px) !important;
+  }
+
+  /* Disable hover styles for elements that should not change on hover */
+  .no-hover {
+    background-color: transparent !important;
+    color: inherit !important;
+    filter: none !important;
+  }
+  .no-hover:hover,
+  .no-hover:focus,
+  .no-hover:active {
+    background-color: transparent !important;
+    color: inherit !important;
+    filter: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+    box-shadow: none !important;
+  }
+
+  /* Song card fixes: ensure the card keeps its dark background even when interactive children are focused/active, and provide external spacing */
+  .song-card {
+    background-color: hsl(var(--card)) !important;
+    color: hsl(var(--card-foreground)) !important;
+    margin: 0.5rem !important; /* adds small space on all sides */
+    will-change: background-color;
+  }
+  .song-card:hover {
+    background-color: hsl(var(--muted)) !important;
+  }
+  /* Prevent interactive child states from making parent appear transparent */
+  .song-card :where(button, a, [role="button"], input, textarea, select) {
+    -webkit-tap-highlight-color: transparent !important;
+  }

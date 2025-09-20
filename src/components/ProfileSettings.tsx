@@ -325,7 +325,7 @@ export default function ProfileSettings({ user, onLogout, onUserUpdate }: Profil
         ) : (
           <div className="space-y-6">
             {/* Profile Display */}
-            <div className="flex items-center gap-4 p-6 bg-card border border-border rounded-lg">
+            {/* <div className="flex items-center gap-4 p-6 bg-card border border-border rounded-lg">
               <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-xl font-medium overflow-hidden">
                 {user.profilePhoto ? (
                   <img src={user.profilePhoto} alt="Profile" className="w-full h-full object-cover" />
@@ -355,7 +355,44 @@ export default function ProfileSettings({ user, onLogout, onUserUpdate }: Profil
                   {getRoleLabel()}
                 </p>
               </div>
-            </div>
+            </div> */}
+            {/* Profile Photo */}
+<div className="flex flex-col items-center">
+  <div className="relative">
+    <div className="w-24 h-24 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-2xl font-medium overflow-hidden">
+      {profilePhoto ? (
+        <img src={profilePhoto} alt="Profile" className="w-full h-full object-cover" />
+      ) : (
+        user.name.charAt(0).toUpperCase()
+      )}
+    </div>
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      // Instead of triggering file input, show disabled notice
+      onClick={() =>
+        notifications.showError(
+          'Feature Disabled',
+          'Profile photo upload is currently disabled.'
+        )
+      }
+      className="absolute -bottom-1 -right-1 w-8 h-8 p-0 rounded-full"
+    >
+      <Camera className="h-4 w-4" />
+    </Button>
+  </div>
+  {/* Hidden input kept but not used */}
+  <input
+    ref={fileInputRef}
+    type="file"
+    accept="image/*"
+    disabled
+    className="hidden"
+  />
+  <p className="text-sm text-muted-foreground mt-2">Photo upload is disabled for now</p>
+</div>
+
 
             {/* Account Info */}
             <Card>

@@ -4,6 +4,7 @@ import { api } from '../lib/api';
 import { Church, Users, Music, ListMusic } from 'lucide-react';
 import { StatsCard } from './ui/StatsCard';
 import { DashboardSkeleton } from './ui/dashboard-skeleton';
+import { AdminDashboard } from './AdminDashboard';
 
 interface DashboardStats {
   totalMinistries: number;
@@ -18,6 +19,11 @@ interface DashboardViewProps {
 }
 
 export function DashboardView({ user, ministryId }: DashboardViewProps) {
+  // If user is main admin, render the admin dashboard
+  if (user.role === 'main_admin') {
+    return <AdminDashboard user={user} />;
+  }
+
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react'
-import { blink } from '../blink/client'
+// File upload will be handled via base64
 import { User } from '../App'
-import { Camera, LogOut, Tag, Save, Edit } from 'lucide-react'
+import { Camera, LogOut, Tag, Save, Edit, Eye, EyeOff } from 'lucide-react'
+import { blink } from '../blink/client'
 import { resizeImage } from '../lib/imageUtils'
 import { useConfirm } from '../hooks/useConfirm'
 import { useNotifications } from '../hooks/useNotifications'
@@ -11,6 +12,7 @@ import { Card, CardContent } from './ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { Label } from './ui/label'
+import { CardSkeleton } from './ui/loading-skeleton'
 
 interface ProfileSettingsProps {
   user: User
@@ -30,6 +32,7 @@ const tagColors = [
 ]
 
 export default function ProfileSettings({ user, onLogout, onUserUpdate }: ProfileSettingsProps) {
+  const [showPasscode, setShowPasscode] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [name, setName] = useState(user.name)
   const [customTag, setCustomTag] = useState(user.customTag || '')
@@ -46,94 +49,94 @@ export default function ProfileSettings({ user, onLogout, onUserUpdate }: Profil
     const file = event.target.files?.[0]
     if (!file) return
 
+    // Check if file is an image
+    if (!file.type.startsWith('image/')) {
+      notifications.showError('Invalid file type', 'Please upload an image file')
+      return
+    }
+
     setLoading(true)
     try {
+      // Resize image first
       const resized = await resizeImage(file, 1024)
-      const { publicUrl } = await blink.storage.upload(
-        resized,
-        `profiles/${user.id}-${Date.now()}.${file.name.split('.').pop()}`,
-        { upsert: true }
-      )
-
-      setProfilePhoto(publicUrl)
+      
+      // Convert to base64
+      const reader = new FileReader()
+      reader.readAsDataURL(resized)
+      
+      await new Promise((resolve, reject) => {
+        reader.onload = () => {
+          setProfilePhoto(reader.result as string)
+          resolve(null)
+        }
+        reader.onerror = (error) => reject(error)
+      })
     } catch (err) {
-      console.error('Failed to upload photo:', err)
-      notifications.showError('Upload failed', 'Failed to upload photo. Please try again.')
+      console.error('Failed to process photo:', err)
+      notifications.showError('Upload failed', 'Failed to process photo. Please try again.')
     } finally {
       setLoading(false)
     }
   }
 
   const handleSaveProfile = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (!name.trim()) {
-      notifications.showError('Invalid name', 'Name cannot be empty')
-      return
+      notifications.showError('Invalid name', 'Name cannot be empty');
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
     try {
-      // Build intended payload (camelCase keys - Blink SDK will convert to snake_case)
-      const intendedPayload: any = {
+      // Build update data with the fields we want to update
+      const updateData: {
+        name: string;
+        profilePhoto: string | null;
+        customTag: string | null;
+        tagColor: string;
+        availability?: string | null;
+      } = {
         name: name.trim(),
         profilePhoto: profilePhoto ?? null,
         customTag: customTag.trim() || null,
         tagColor: tagColor ?? '#8B5CF6'
-      }
+      };
+      
       // Only include availability if the user object had it originally
       if (Object.prototype.hasOwnProperty.call(user, 'availability')) {
-        intendedPayload.availability = availability ?? null
+        updateData.availability = availability ?? null;
       }
 
-      // Fetch existing user record to determine which fields actually exist in DB (returned as camelCase)
-      const existing = await blink.db.users.list({ where: { id: user.id }, limit: 1 })
-      const existingKeys = existing && existing.length > 0 ? Object.keys(existing[0] as any) : []
-
-      // Build a safe payload including only keys present in the existing record
-      const safePayload: any = {}
-      for (const key of Object.keys(intendedPayload)) {
-        if (existingKeys.includes(key)) {
-          safePayload[key] = intendedPayload[key]
-        }
-      }
-
-      // If nothing matched (very rare), fall back to updating only the name
-      if (Object.keys(safePayload).length === 0) {
-        safePayload.name = intendedPayload.name
-      }
-
-      // Perform the update
-      await blink.db.users.update(user.id, safePayload)
-
-      // Update local copy
-      const updatedUser = {
-        ...user,
-        ...safePayload
-      }
+      // Use the blink.db API to update the user
+      const updatedUser = await blink.db.users.update(user.id, updateData);
 
       // Notify parent to update app state; fall back to localStorage if not provided
       if (onUserUpdate) {
-        onUserUpdate(updatedUser)
+        onUserUpdate(updatedUser);
       } else {
-        localStorage.setItem('nxgn_user', JSON.stringify(updatedUser))
+        localStorage.setItem('nxgn_user', JSON.stringify(updatedUser));
       }
 
-      setIsEditing(false)
-      notifications.showSuccess('Profile updated', 'Your profile was saved')
+      setIsEditing(false);
+      notifications.showSuccess('Profile updated', 'Your profile was saved');
     } catch (err: any) {
       // Log detailed error info for debugging
-      console.error('Failed to update profile:', err)
-      try {
-        if (err?.raw) console.error('Raw response:', JSON.stringify(err.raw))
-      } catch (e) {
-        console.error('Stringify error:', e)
+      console.error('Failed to update profile:', err);
+      
+      // Try to extract error message
+      let errorMessage = 'Failed to update profile';
+      if (err?.message) {
+        errorMessage = err.message;
+      } else if (err?.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
       }
-      if (err?.message) console.error('Error message:', err.message)
-      if (err?.status) console.error('Status:', err.status)
-
-      notifications.showError('Update failed', err?.message || String(err))
+      
+      console.error('Error details:', errorMessage);
+      notifications.showError('Update failed', errorMessage);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
@@ -176,7 +179,6 @@ export default function ProfileSettings({ user, onLogout, onUserUpdate }: Profil
         <h2 className="text-xl font-semibold text-foreground">Profile Settings</h2>
         {!isEditing && (
           <Button onClick={() => setIsEditing(true)} className="flex items-center gap-2">
-            <Edit className="h-4 w-4" />
             Edit Profile
           </Button>
         )}
@@ -324,38 +326,7 @@ export default function ProfileSettings({ user, onLogout, onUserUpdate }: Profil
           </form>
         ) : (
           <div className="space-y-6">
-            {/* Profile Display */}
-            {/* <div className="flex items-center gap-4 p-6 bg-card border border-border rounded-lg">
-              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-xl font-medium overflow-hidden">
-                {user.profilePhoto ? (
-                  <img src={user.profilePhoto} alt="Profile" className="w-full h-full object-cover" />
-                ) : (
-                  user.name.charAt(0).toUpperCase()
-                )}
-              </div>
-              
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-xl font-semibold text-foreground">{user.name}</h3>
-                  {user.customTag && (
-                    <span 
-                      className="px-2 py-1 rounded text-xs font-medium flex items-center gap-1"
-                      style={{ 
-                        backgroundColor: `${user.tagColor}20`, 
-                        color: user.tagColor,
-                        border: `1px solid ${user.tagColor}40`
-                      }}
-                    >
-                      <Tag className="h-3 w-3" />
-                      {user.customTag}
-                    </span>
-                  )}
-                </div>
-                <p className={`inline-block px-3 py-1 rounded-full text-sm border ${getRoleColor()}`}>
-                  {getRoleLabel()}
-                </p>
-              </div>
-            </div> */}
+             
             {/* Profile Photo */}
 <div className="flex flex-col items-center">
   <div className="relative">
@@ -398,29 +369,76 @@ export default function ProfileSettings({ user, onLogout, onUserUpdate }: Profil
             <Card>
               <CardContent className="p-6">
                 <h4 className="font-medium text-foreground mb-4">Account Information</h4>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Passcode:</span>
-                    <code className="bg-muted px-2 py-1 rounded font-mono text-sm">{user.pincode}</code>
+                {loading ? (
+                  <div className="h-full p-6">
+                    <div className="max-w-2xl mx-auto">
+                      <div className="flex items-center justify-between mb-8">
+                        <div>
+                          <div className="h-8 bg-muted rounded w-48 mb-2"></div>
+                          <div className="h-4 bg-muted rounded w-32"></div>
+                        </div>
+                        <div className="h-24 w-24 bg-muted rounded-full"></div>
+                      </div>
+                      
+                      <div className="space-y-6">
+                        <CardSkeleton className="h-24" />
+                        <CardSkeleton className="h-32" />
+                        <CardSkeleton className="h-16" />
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Role:</span>
-                    <span className="text-foreground">{getRoleLabel()}</span>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Passcode:</span>
+                      <div className="flex items-center gap-2">
+                        <code className="bg-muted px-2 py-1 rounded font-mono text-sm">
+                          {showPasscode ? user.pincode : '•'.repeat(6)}
+                        </code>
+                        <button
+                          type="button"
+                          onClick={() => setShowPasscode(!showPasscode)}
+                          className="text-muted-foreground hover:text-foreground transition-colors"
+                          aria-label={showPasscode ? 'Hide passcode' : 'Show passcode'}
+                        >
+                          {showPasscode ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Role:</span>
+                      <span className="text-foreground">{getRoleLabel()}</span>
+                    </div>
+                    {user.customTag && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Tag:</span>
+                        <span 
+                          className="px-2 py-1 rounded text-xs font-medium"
+                          style={{
+                            backgroundColor: `${user.tagColor || '#8B5CF6'}20`, // 20% opacity of the tag color
+                            color: user.tagColor || '#8B5CF6',
+                            border: `1px solid ${user.tagColor || '#8B5CF6'}40`
+                          }}
+                        >
+                          {user.customTag}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Status:</span>
+                      <span 
+                        className={`px-2 py-1 rounded text-xs ${
+                          user.status === 'approved' 
+                            ? 'bg-green-500/20 text-green-400' 
+                            : user.status === 'pending'
+                            ? 'bg-yellow-500/20 text-yellow-400'
+                            : 'bg-red-500/20 text-red-400'
+                        }`}>
+                        {user.status}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Status:</span>
-                    <span 
-                      className={`px-2 py-1 rounded text-xs ${
-                        user.status === 'approved' 
-                          ? 'bg-green-500/20 text-green-400' 
-                          : user.status === 'pending'
-                          ? 'bg-yellow-500/20 text-yellow-400'
-                          : 'bg-red-500/20 text-red-400'
-                      }`}>
-                      {user.status}
-                    </span>
-                  </div>
-                </div>
+                )}
               </CardContent>
             </Card>
 

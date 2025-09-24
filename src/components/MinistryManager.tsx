@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react'
 import { blink } from '../blink/client'
-import { Home, Plus, Edit, Trash2, Users, Shield, User as UserIcon, Loader2 } from 'lucide-react'
+import { Home, Plus, Pencil, Trash, Users, Shield, User as UserIcon, Loader2, Eye } from 'lucide-react'
 import { useNotifications } from '../hooks/useNotifications'
 import { useConfirm } from '../hooks/useConfirm'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardContent } from './ui/card'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { Textarea } from './ui/textarea'
-import { Label } from './ui/label' 
+import { Label } from './ui/label'
+import { PageSkeleton, ListSkeleton } from './ui/loading-skeleton'
 
 interface Ministry {
   id: string
@@ -31,7 +32,11 @@ interface User {
   tagColor?: string
 }
 
-export default function MinistryManager() {
+interface MinistryManagerProps {
+  userRole?: 'main_admin' | 'sub_admin' | 'user';
+}
+
+export default function MinistryManager({ userRole = 'user' }: MinistryManagerProps) {
   const [ministries, setMinistries] = useState<Ministry[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [showAddModal, setShowAddModal] = useState(false)
@@ -39,6 +44,8 @@ export default function MinistryManager() {
   const [selectedMinistry, setSelectedMinistry] = useState<Ministry | null>(null)
   const [loading, setLoading] = useState(false)
   const [deletingIds, setDeletingIds] = useState<string[]>([])
+  const [expandedMinistryId, setExpandedMinistryId] = useState<string | null>(null)
+  const [ministryUsers, setMinistryUsers] = useState<{[key: string]: User[]}>({})
 
   // Form state
   const [name, setName] = useState('')
@@ -165,8 +172,13 @@ export default function MinistryManager() {
 
       // Assign new admin if set
       if (adminId !== '__none' && adminId.trim()) {
+        // Find the user to check their current role
+        const userToPromote = users.find(u => u.id === adminId);
+        // Only update role if not already a main_admin
+        const role = userToPromote?.role === 'main_admin' ? 'main_admin' : 'sub_admin';
+        
         await blink.db.users.update(adminId, {
-          role: 'sub_admin',
+          role: role,
           ministryId: editingMinistry.id,
           status: 'approved'
         })
@@ -177,6 +189,7 @@ export default function MinistryManager() {
           ? { ...ministry, ...updatedMinistry }
           : ministry
       ))
+      setShowAddModal(false)
       setEditingMinistry(null)
       resetForm()
       loadUsers() // Reload to reflect role changes
@@ -250,8 +263,39 @@ export default function MinistryManager() {
     setAdminId(ministry.adminId || '__none')
   }
 
+  const getMinistryMembers = (ministryId: string) => {
+    return users.filter(u => u.ministryId === ministryId && u.status === 'approved')
+  }
+
   const getMinistryMemberCount = (ministryId: string) => {
-    return users.filter(user => user.ministryId === ministryId && user.status === 'approved').length
+    return getMinistryMembers(ministryId).length
+  }
+
+  const toggleMinistryExpansion = async (ministryId: string) => {
+    if (expandedMinistryId === ministryId) {
+      setExpandedMinistryId(null)
+    } else {
+      setExpandedMinistryId(ministryId)
+      
+      if (!ministryUsers[ministryId]) {
+        try {
+          const users = await blink.db.users.list({
+            where: { 
+              ministryId: ministryId,
+              status: 'approved'
+            },
+            orderBy: { name: 'asc' }
+          })
+          
+          setMinistryUsers(prev => ({
+            ...prev,
+            [ministryId]: users as User[]
+          }))
+        } catch (error) {
+          console.error('Failed to fetch ministry users:', error)
+        }
+      }
+    }
   }
 
   const getMinistryAdmin = (ministry: Ministry) => {
@@ -286,9 +330,28 @@ export default function MinistryManager() {
 
   if (loading && ministries.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-muted-foreground">Loading ministries...</div>
-      </div>
+      <PageSkeleton 
+        withHeader={true}
+        withSearch={true}
+        withFilters={false}
+        contentSkeleton={() => (
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="p-4 border rounded-lg bg-card">
+                <div className="space-y-3">
+                  <div className="h-6 bg-muted rounded w-3/4"></div>
+                  <div className="h-4 bg-muted rounded w-1/2"></div>
+                  <div className="h-4 bg-muted rounded w-5/6"></div>
+                  <div className="flex justify-between pt-2">
+                    <div className="h-8 w-24 bg-muted rounded"></div>
+                    <div className="h-8 w-8 bg-muted rounded-full"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      />
     )
   }
 
@@ -383,10 +446,12 @@ export default function MinistryManager() {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-foreground">Ministry Management</h2>
-        <Button onClick={() => setShowAddModal(true)} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Add
-        </Button>
+        {userRole === 'main_admin' && (
+          <Button onClick={() => setShowAddModal(true)} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Add
+          </Button>
+        )}
       </div>
 
       {/* Ministries Grid */}
@@ -398,79 +463,226 @@ export default function MinistryManager() {
             <p className="text-muted-foreground mb-4">Create your first ministry to get started</p>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {ministries.map((ministry) => {
               const admin = getMinistryAdmin(ministry)
               const memberCount = getMinistryMemberCount(ministry.id)
               
               return (
-                <div
-                  key={ministry.id}
-                  className="bg-card border border-border rounded-lg p-4 hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex flex-col space-y-4">
-                    <div className="flex items-center gap-3">
-                      {/* Ministry Profile Circle */}
-                      <button
-                        onClick={() => setSelectedMinistry(ministry)}
-                        className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg text-white hover:opacity-90 transition-opacity flex-shrink-0 ${getMinistryProfileColor(ministry.name)}`}
+                <div key={ministry.id} className="relative">
+                  <Card 
+                    className={`overflow-visible hover:shadow-md transition-all duration-200 ${
+                      expandedMinistryId === ministry.id ? 'rounded-b-none' : ''
+                    }`}
+                  >
+                    <CardContent className="p-4">
+                      <div 
+                        className="flex flex-col space-y-3 cursor-pointer"
+                        onClick={() => toggleMinistryExpansion(ministry.id)}
                       >
-                        {getMinistryInitials(ministry.name)}
-                      </button> 
-                      
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-foreground mb-1 flex items-center gap-2">
-                          <Home className="h-4 w-4" />
-                          <span className="truncate">{ministry.name}</span>
-                        </h3>
-                        
-                        {ministry.description && (
-                          <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{ministry.description}</p>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center gap-1 ml-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditModal(ministry)}
-                          className="p-2 h-auto w-auto text-muted-foreground hover:text-primary"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteMinistry(ministry.id)}
-                          disabled={loading || deletingIds.includes(ministry.id)}
-                          className="p-2 h-auto w-auto text-muted-foreground hover:text-destructive"
-                        >
-                          {deletingIds.includes(ministry.id) ? <Loader2 className="h-4 w-4 animate-spin text-destructive" /> : <Trash2 className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Users className="h-3 w-3" />
-                          <span>{memberCount} members</span>
+                        <div className="flex items-start gap-3">
+                          {/* Ministry Profile Circle */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedMinistry(ministry);
+                            }}
+                            className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg text-white hover:opacity-90 transition-opacity flex-shrink-0 mt-0.5 ${getMinistryProfileColor(ministry.name)}`}
+                            aria-label={`View ${ministry.name} details`}
+                          >
+                            {getMinistryInitials(ministry.name)}
+                          </button> 
+                          
+                          <div className="flex-1 min-w-0 overflow-hidden">
+                            <div className="flex items-start justify-between gap-2">
+                              <h3 className="font-medium text-foreground text-base flex items-center gap-1.5 min-w-0">
+                                <Home className="h-4 w-4 flex-shrink-0" />
+                                <span className="truncate max-w-[180px] sm:max-w-[220px] md:max-w-[280px] lg:max-w-[350px] xl:max-w-[400px] 2xl:max-w-[500px]">
+                                  {ministry.name}
+                                </span>
+                              </h3>
+                              
+                              <div className="flex-shrink-0 flex items-center gap-0.5 bg-background/80 backdrop-blur-sm rounded-md p-0.5">
+                                {userRole === 'main_admin' ? (
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        openEditModal(ministry);
+                                      }}
+                                      className="p-1.5 h-auto w-auto text-white/90 hover:text-white hover:bg-primary/20 rounded"
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteMinistry(ministry.id);
+                                      }}
+                                      disabled={loading || deletingIds.includes(ministry.id)}
+                                      className="p-1.5 h-auto w-auto text-white/90 hover:text-white hover:bg-destructive/20 rounded"
+                                    >
+                                      {deletingIds.includes(ministry.id) ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <Trash className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <div className=" text-sm">
+                                      View
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {ministry.description && (
+                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2 break-words">
+                                {ministry.description}
+                              </p>
+                            )}
+                          </div>
                         </div>
                         
-                        {admin && (
-                          <div className="flex items-center gap-1">
-                            <Shield className="h-3 w-3" />
-                            <span className="truncate">Admin: {admin.name}</span>
+                        <div className="pt-2 border-t border-border">
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-2">
+                              {expandedMinistryId !== ministry.id && (
+                                <div className="flex items-center gap-1 bg-muted/50 px-2 py-1 rounded">
+                                  <Users className="h-3.5 w-3.5" />
+                                  <span>{memberCount} {memberCount === 1 ? 'member' : 'members'}</span>
+                                </div>
+                              )}
+                              
+                              {admin && (
+                                <div className="hidden xs:flex items-center gap-1 bg-muted/50 px-2 py-1 rounded">
+                                  <Shield className="h-3.5 w-3.5 text-blue-500" />
+                                  <span className="truncate max-w-[120px]">{admin.name.split(' ')[0]}</span>
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded">
+                              <span className="text-xs">Code:</span>
+                              <code className="font-mono text-xs font-medium bg-background/50 px-1.5 py-0.5 rounded">
+                                {ministry.passcode}
+                              </code>
+                            </div>
                           </div>
-                        )}
+                        </div>
                       </div>
-                      
-                      <div className="text-xs text-muted-foreground">
-                        <span>Passcode: </span>
-                        <code className="bg-muted px-2 py-1 rounded font-mono text-xs">{ministry.passcode}</code>
-                      </div>
-                    </div>
-                  </div>
+
+                      {expandedMinistryId === ministry.id && (
+                        <div className="mt-3 pt-3 border-t border-border">
+                          <h4 className="text-sm font-medium text-foreground mb-2">
+                            Members ({ministryUsers[ministry.id]?.length || 0})
+                          </h4>
+                          <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                            {ministryUsers[ministry.id] ? (
+                              ministryUsers[ministry.id].length > 0 ? (
+                                ministryUsers[ministry.id].map((user) => (
+                                  <div key={user.id} className="flex items-center gap-3 p-2 hover:bg-muted/50 rounded-md transition-colors">
+                                    <div className="relative">
+                                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                                        {user.profilePhoto ? (
+                                          <img 
+                                            src={user.profilePhoto} 
+                                            alt={user.name} 
+                                            className="w-full h-full object-cover"
+                                          />
+                                        ) : (
+                                          <UserIcon className="h-4 w-4 text-muted-foreground" />
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <p className="text-sm font-medium text-foreground truncate">
+                                          {user.name}
+                                        </p>
+                                        {user.role === 'main_admin' ? (
+                                          <>
+                                        <span
+                                          className="inline-flex items-center justify-center text-xs font-semibold px-2 py-1 rounded-full
+                                            bg-black text-white border border-black 
+                                            shadow-[0_0_2.7px] hover:shadow-[0_0_6px] hover:scale-105 transform 
+                                            transition-all duration-200 ease-in-out whitespace-nowrap"
+                                          style={{
+                                            animation: 'borderNeon 3s linear infinite',
+                                            borderColor: 'white',
+                                            // Keep text always white, no text shadow animation
+                                            textShadow: '0 0 2pxrgb(163, 9, 9) 0, 0)'
+                                          }}
+                                        >
+                                        Main | NXGN.
+                                        </span>
+
+                                        <style>
+                                        {`
+                                          @keyframes borderNeon {
+                                            0% { border-color:rgb(24, 255, 255); }
+                                            25% { border-color:rgb(73, 211, 144); }
+                                            50% { border-color:rgb(255, 252, 103); }
+                                            75% { border-color:rgb(191, 255, 0); }
+                                            100% { border-color:rgb(0, 247, 255); }
+                                          }
+                                        `}
+                                        </style>
+
+                                        </>
+
+
+                                        ) : user.role === 'admin' ? (
+                                          <span className="text-xs font-semibold bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded whitespace-nowrap">
+                                            Admin
+                                          </span>
+                                        ) : user.role === 'sub_admin' ? (
+                                          <span className="text-xs font-semibold bg-black text-yellow-500 px-1.5 py-0.5 rounded whitespace-nowrap">
+                                            Sub-Admin
+                                          </span>
+                                        ) : (
+                                          <span className="text-xs font-semibold bg-black text-white px-1.5 py-0.5 rounded whitespace-nowrap">
+                                            Member
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-xs text-muted-foreground truncate">
+                                        {user.customTag && (
+                                          <span 
+                                            className="inline-flex items-center px-2 py-0.5 rounded text-xs mr-2"
+                                            style={{
+                                              backgroundColor: `${user.tagColor || '#8B5CF6'}20`,
+                                              color: user.tagColor || '#8B5CF6',
+                                              border: `1px solid ${user.tagColor || '#8B5CF6'}40`
+                                            }}
+                                          >
+                                            {user.customTag}
+                                          </span>
+                                        )}
+                                      </p>
+                                    </div>
+                                  </div>
+                                ))
+                              ) : (
+                                <p className="text-sm text-muted-foreground text-center py-2">
+                                  No members found
+                                </p>
+                              )
+                            ) : (
+                              <div className="flex justify-center py-4">
+                                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 </div>
               )
             })}
@@ -481,16 +693,25 @@ export default function MinistryManager() {
       {/* Add/Edit Modal */}
       <Dialog open={showAddModal || !!editingMinistry} onOpenChange={(open) => {
         if (!open) {
-          setShowAddModal(false)
-          setEditingMinistry(null)
-          resetForm()
+          // Only reset the form and close the modal if we're not in the middle of a submit
+          if (!loading) {
+            setShowAddModal(false)
+            setEditingMinistry(null)
+            resetForm()
+          }
         }
       }}>
-        <DialogContent className="w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent 
+          className="w-full max-w-md max-h-[90vh] overflow-y-auto"
+          aria-describedby="dialog-description"
+        >
           <DialogHeader>
             <DialogTitle>
               {editingMinistry ? 'Edit Ministry' : 'Add New Ministry'}
             </DialogTitle>
+            <DialogDescription id="dialog-description">
+              {editingMinistry ? 'Update the ministry details below' : 'Enter the details for the new ministry'}
+            </DialogDescription>
           </DialogHeader>
           
           <form onSubmit={editingMinistry ? handleEditMinistry : handleAddMinistry} className="space-y-4">

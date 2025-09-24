@@ -1,15 +1,46 @@
 import { useState, useEffect } from 'react'
 import { User } from '../App'
 import { blink } from '../blink/client'
-import { Music, ListMusic, Users, Settings, Home, Crown, Shield, User as UserIcon } from 'lucide-react'
+import { Music, ListMusic, Users, Settings as SettingsIcon, Home, Crown, Shield, User as UserIcon, LogOut, Menu } from 'lucide-react'
 import SongLibrary from './SongLibrary'
 import PlaylistManager from './PlaylistManager'
 import MinistryManager from './MinistryManager'
 import UserManager from './UserManager'
 import ProfileSettings from './ProfileSettings'
+import { DashboardView } from './DashboardView'
 import { Button } from './ui/button'
-import { Card, CardContent } from './ui/card'
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { ProfileDropdown } from './layout/ProfileDropdown';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
+import { ResponsiveLayout } from './layout/ResponsiveLayout'
+import { ResponsiveNav } from './layout/ResponsiveNav'
+import { cn } from '../lib/utils'
+
+// Define prop types for child components
+interface SongLibraryProps {
+  user: User;
+  ministryId?: string;
+}
+
+interface PlaylistManagerProps {
+  user: User;
+  ministryId?: string;
+}
+
+interface UserManagerProps {
+  user: User;
+  ministryId?: string;
+}
+
+interface ProfileSettingsProps {
+  user: User;
+  onUserUpdate: (user: User) => void;
+  onLogout: () => void;
+}
+
+interface MinistryManagerProps {
+  user: User;
+}
 
 interface DashboardProps {
   user: User
@@ -23,7 +54,8 @@ interface Ministry {
 }
 
 export default function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
-  const [activeTab, setActiveTab] = useState<'songs' | 'playlists' | 'ministries' | 'users' | 'settings'>('songs')
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'songs' | 'playlists' | 'ministries' | 'users' | 'settings' | 'home'>('home')
   const [ministry, setMinistry] = useState<Ministry | null>(null)
   const [selectedMinistryId, setSelectedMinistryId] = useState<string | undefined>(() => {
     try {
@@ -34,6 +66,17 @@ export default function Dashboard({ user, onLogout, onUserUpdate }: DashboardPro
     }
   })
   const [ministries, setMinistries] = useState<Ministry[]>([])
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    
+    checkIfMobile()
+    window.addEventListener('resize', checkIfMobile)
+    return () => window.removeEventListener('resize', checkIfMobile)
+  }, [])
 
   useEffect(() => {
     const loadData = async () => {
@@ -65,10 +108,10 @@ export default function Dashboard({ user, onLogout, onUserUpdate }: DashboardPro
     }
     
     loadData()
-    }, [user.ministryId, user.role, selectedMinistryId])
-    
-    // Persist selected ministry for Main Admin (store preference)
-    useEffect(() => {
+  }, [user.ministryId, user.role, selectedMinistryId])
+
+  // Persist selected ministry for Main Admin (store preference)
+  useEffect(() => {
     try {
       if (user.role === 'main_admin' && selectedMinistryId) {
         localStorage.setItem('nxgn:lastMinistry', selectedMinistryId)
@@ -76,9 +119,9 @@ export default function Dashboard({ user, onLogout, onUserUpdate }: DashboardPro
     } catch (e) {
       // ignore storage errors
     }
-    }, [selectedMinistryId, user.role])
-    
-    // Logo glow on reload for 3 seconds
+  }, [selectedMinistryId, user.role])
+
+  // Logo glow on reload for 3 seconds
   const [logoGlow, setLogoGlow] = useState<boolean>(true)
   useEffect(() => {
     setLogoGlow(true)
@@ -121,166 +164,167 @@ export default function Dashboard({ user, onLogout, onUserUpdate }: DashboardPro
   }
 
   const renderContent = () => {
+    const commonProps = { user, ministryId: selectedMinistryId } as const;
+    
     switch (activeTab) {
+      case 'home':
+        return <DashboardView {...commonProps} />
       case 'songs':
-        return <SongLibrary user={user} ministryId={selectedMinistryId} />
+        return <SongLibrary {...commonProps} />
       case 'playlists':
-        return <PlaylistManager user={user} ministryId={selectedMinistryId} />
+        return <PlaylistManager {...commonProps} />
       case 'ministries':
-        return user.role === 'main_admin' ? <MinistryManager /> : null
+        return (user.role === 'main_admin' || user.role === 'sub_admin') ? 
+          <MinistryManager userRole={user.role} /> : null
       case 'users':
-        return (user.role === 'main_admin' || user.role === 'sub_admin') ? <UserManager user={user} ministryId={selectedMinistryId} /> : null
-
+        return (user.role === 'main_admin' || user.role === 'sub_admin') 
+          ? <UserManager {...commonProps} ministryId={selectedMinistryId} /> 
+          : null
       case 'settings':
-        return <ProfileSettings user={user} onLogout={onLogout} onUserUpdate={onUserUpdate} />
+        return (
+          <ProfileSettings 
+            user={user} 
+            onLogout={onLogout} 
+            onUserUpdate={onUserUpdate} 
+          />
+        )
       default:
-        return null
+        return null;
     }
   }
 
-  return (
-    <div className="h-screen bg-background flex flex-col">
-      {/* Header */}
-      <div className="bg-card border-b border-border p-4">
-        <div className="flex items-center justify-between">
-          <div className="min-w-0 flex flex-col">
-            <h1 className="text-2xl font-bold flex items-baseline gap-2">
-              <span className={`nxgn-logo ${logoGlow ? 'glow' : ''} leading-none`}>NXGN<span className="nxgn-logo">.</span></span>
-              <span className="ml-2 text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full text-[#06B6D4] bg-white/5 beta-tag">BETA</span>
+  const renderHeader = () => {
+    const currentMinistry = ministries.find(m => m.id === selectedMinistryId) || ministry;
+    
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const shouldAddSpacing = isMobile && !isMobileMenuOpen;
+    
+    return (
+      <div className="flex items-center justify-between w-full min-h-[40px]">
+        <div className="flex items-center h-full">
+          <div className={`flex flex-col justify-center transition-all duration-300 ease-in-out ${shouldAddSpacing ? 'pl-8' : isMobileMenuOpen ? 'pl-1' : ''} h-full`}>
+            <h1 
+              className="text-xl font-semibold text-foreground relative"
+            >
+              <span 
+                className={`transition-all duration-300 ease-in-out ${
+                  isMobileMenuOpen ? 'text-shadow-glow' : ''
+                }`}
+                style={{
+                  transition: isMobileMenuOpen 
+                    ? 'text-shadow 300ms ease-in-out' 
+                    : 'text-shadow 300ms ease-in-out 300ms' // Add delay to match sidebar close
+                }}
+              >
+                NXGN.
+              </span>
             </h1>
-            {user.role === 'main_admin' && ministries.length > 0 ? (
-              <div className="flex items-center gap-2 mt-1">
-                <Select value={selectedMinistryId || ''} onValueChange={setSelectedMinistryId}>
-                  <SelectTrigger className="w-[200px] h-6 text-sm bg-transparent border-0 text-muted-foreground focus:ring-0 focus:outline-none">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ministries.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>
-                        {m.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : ministry ? (
-              <div className="flex items-center gap-2">
-                <p className="text-sm text-muted-foreground truncate">{ministry.name}</p>
-              </div>
-            ) : null}
+            {currentMinistry?.name && (
+              <p 
+                className="text-xs text-muted-foreground transition-all duration-300 ease-in-out whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px] md:max-w-[220px]"
+                title={currentMinistry.name}
+              >
+                {currentMinistry.name}
+              </p>
+            )}
           </div>
-          
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <p className="text-sm font-medium text-foreground">{user.name}</p>
-              <div className="flex items-center gap-1 justify-end">
-                {getRoleIcon()}
-                <span className="text-xs text-muted-foreground">{getRoleLabel()}</span>
-              </div>
-            </div>
-            
-            <Button
-              variant="ghost"
-              onClick={() => setActiveTab('settings')}
-              className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-medium p-0 hover:bg-primary/90"
+          {isMobileMenuOpen && (
+            <button 
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="px-14 py-1 -mr-2 text-muted-foreground hover:text-foreground transition-all duration-200 self-center group relative"
+              aria-label="Close menu"
             >
-              {user.profilePhoto ? (
-                <img src={user.profilePhoto} alt="Profile" className="w-full h-full rounded-full object-cover" />
-              ) : (
-                user.name.charAt(0).toUpperCase()
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+className={`transition-all duration-300 transform group-hover:scale-110 ${isMobileMenuOpen ? 'animate-bounce-horizontal' : 'opacity-0'}`}
+              >
+<path d="m9 18 6-6-6-6" className="transform group-hover:translate-x-0.5 transition-transform duration-200" />
+              </svg>
+            </button>
+          )}
+        </div>
+        <div className={isMobileMenuOpen ? 'hidden' : 'flex items-center gap-4'}>
+          {user.role !== 'main_admin' && (
+            <div className="flex flex-col items-end">
+              <span className="text-sm font-medium text-foreground text-right">
+                {user.name.split(' ').slice(0, 2).join(' ')}
+              </span>
+              {user.customTag && (
+                <span 
+                  className="text-xs px-2 py-0.5 rounded-full font-medium mt-0.5"
+                  style={{ 
+                    backgroundColor: `${user.tagColor}1a`, 
+                    color: user.tagColor 
+                  }}
+                >
+                  {user.customTag}
+                </span>
               )}
-            </Button>
+            </div>
+          )}
+          <div className={`${isMobileMenuOpen ? 'opacity-0' : 'opacity-100'} flex items-center`}>
+            {user.role === 'main_admin' && (
+              <Crown className="h-4 w-4 text-yellow-500 mr-2" />
+            )}
+            <ProfileDropdown
+              user={user}
+              ministries={user.role === 'main_admin' ? ministries : []}
+              selectedMinistryId={selectedMinistryId}
+              onMinistryChange={(id) => setSelectedMinistryId(id)}
+              onLogout={onLogout}
+              onProfileClick={() => setActiveTab('settings')}
+            />
           </div>
         </div>
       </div>
+    );
+  }
 
-      {/* Navigation Tabs */}
-      <div className="bg-card border-b border-border px-4">
-        <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
-          <div className="flex gap-1 min-w-max">
-          <Button
-            variant="ghost"
-            onClick={() => setActiveTab('songs')}
-            className={`px-4 py-3 flex items-center gap-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex-shrink-0 rounded-none h-auto focus:outline-none focus:ring-0 focus:bg-transparent active:bg-transparent hover:bg-transparent ${
-              activeTab === 'songs' 
-                ? 'border-primary text-primary bg-transparent' 
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-            style={{ backgroundColor: 'transparent !important' }}
-          >
-            <Music className={`h-4 w-4 ${activeTab === 'songs' ? 'text-primary' : 'text-muted-foreground'}`} />
-            Songs
-          </Button>
-          
-          <Button
-            variant="ghost"
-            onClick={() => setActiveTab('playlists')}
-            className={`px-4 py-3 flex items-center gap-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex-shrink-0 rounded-none h-auto focus:outline-none focus:ring-0 focus:bg-transparent active:bg-transparent hover:bg-transparent ${
-              activeTab === 'playlists' 
-                ? 'border-primary text-primary bg-transparent' 
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-            style={{ backgroundColor: 'transparent !important' }}
-          >
-            <ListMusic className={`h-4 w-4 ${activeTab === 'playlists' ? 'text-primary' : 'text-muted-foreground'}`} />
-            Setlists
-          </Button>
-
-          {canAccessTab('ministries') && (
-            <Button
-              variant="ghost"
-              onClick={() => setActiveTab('ministries')}
-              className={`px-4 py-3 flex items-center gap-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex-shrink-0 rounded-none h-auto focus:outline-none focus:ring-0 focus:bg-transparent active:bg-transparent hover:bg-transparent ${
-                activeTab === 'ministries' 
-                  ? 'border-primary text-primary bg-transparent' 
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-              style={{ backgroundColor: 'transparent !important' }}
-            >
-              <Home className={`h-4 w-4 ${activeTab === 'ministries' ? 'text-primary' : 'text-muted-foreground'}`} />
-              Ministries
-            </Button>
-          )}
-
-          {canAccessTab('users') && (
-            <Button
-              variant="ghost"
-              onClick={() => setActiveTab('users')}
-              className={`px-4 py-3 flex items-center gap-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex-shrink-0 rounded-none h-auto focus:outline-none focus:ring-0 focus:bg-transparent active:bg-transparent hover:bg-transparent ${
-                activeTab === 'users' 
-                  ? 'border-primary text-primary bg-transparent' 
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-              style={{ backgroundColor: 'transparent !important' }}
-            >
-              <Users className={`h-4 w-4 ${activeTab === 'users' ? 'text-primary' : 'text-muted-foreground'}`} />
-              Members
-            </Button>
-          )}
-
-
-
-          <Button
-            variant="ghost"
-            onClick={() => setActiveTab('settings')}
-            className={`px-4 py-3 flex items-center gap-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex-shrink-0 rounded-none h-auto focus:outline-none focus:ring-0 focus:bg-transparent active:bg-transparent hover:bg-transparent ${
-              activeTab === 'settings' 
-                ? 'border-primary text-primary bg-transparent' 
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-            style={{ backgroundColor: 'transparent !important' }}
-          >
-            <Settings className={`h-4 w-4 ${activeTab === 'settings' ? 'text-primary' : 'text-muted-foreground'}`} />
-            Settings
-          </Button>
-          </div>
+  const renderSidebar = () => {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="h-16 flex-shrink-0"></div>
+        
+        <div className="flex-1 overflow-y-auto py-4">
+          <ResponsiveNav 
+            activeTab={activeTab} 
+            onTabChange={(tab) => {
+              setActiveTab(tab as any);
+              if (isMobile) {
+                // Close the mobile menu after a short delay for better UX
+                setTimeout(() => setIsMobileMenuOpen(false), 150);
+              }
+            }}
+            userRole={user.role}
+            onItemClick={() => {
+              if (isMobile) {
+                setIsMobileMenuOpen(false);
+              }
+            }}
+          />
         </div>
       </div>
+    );
+  }
 
-      {/* Content */}
-      <div className="flex-1 overflow-hidden">
+  return (
+    <ResponsiveLayout
+      sidebarContent={renderSidebar()}
+      headerContent={renderHeader()}
+      isMobileMenuOpen={isMobileMenuOpen}
+      onMobileMenuToggle={setIsMobileMenuOpen}
+    >
+      <div className="mx-auto w-full max-w-7xl">
         {renderContent()}
       </div>
-    </div>
-  )
+    </ResponsiveLayout>
+  );
 }

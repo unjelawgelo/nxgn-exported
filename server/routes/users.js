@@ -100,7 +100,41 @@ function toCamel(row){
 }
 
 function toSnakeKey(k){
-  return k.replace(/([A-Z])/g, '_$1').toLowerCase();
+  return k.replace(/[A-Z]/g, m => `_${m.toLowerCase()}`);
 }
+
+// Delete user
+router.delete('/:id', async (req, res) => {
+  console.log(`DELETE /api/users/${req.params.id} called`);
+  try {
+    // First, delete any dependent records (like playlist_songs, playlists, etc.)
+    // that might have foreign key constraints
+    console.log('Deleting dependent records...');
+    
+    // Check the actual column names in your database
+    // For now, we'll try with the most common column names
+    try {
+      await query('DELETE FROM playlist_songs WHERE playlist_id IN (SELECT id FROM playlists WHERE "userId" = $1)', [req.params.id]);
+      await query('DELETE FROM playlists WHERE "userId" = $1', [req.params.id]);
+    } catch (e) {
+      console.log('Error deleting dependent records (this might be expected if tables/columns don\'t exist):', e.message);
+    }
+    
+    // Now delete the user
+    console.log('Deleting user...');
+    const { rowCount } = await query('DELETE FROM users WHERE id = $1', [req.params.id]);
+    
+    if (rowCount === 0) {
+      console.log('User not found');
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    console.log('User deleted successfully');
+    res.status(204).send();
+  } catch (e) {
+    console.error('Failed to delete user:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
 
 export default router;

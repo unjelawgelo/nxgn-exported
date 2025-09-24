@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { User } from '../App'
 import { blink } from '../blink/client'
-import { Music, ListMusic, Users, Settings as SettingsIcon, Home, Crown, Shield, User as UserIcon, LogOut, Menu } from 'lucide-react'
+import { Music, ListMusic, Users, Settings as SettingsIcon, Home, Crown, Shield, User as UserIcon, LogOut, Menu, Calendar } from 'lucide-react'
 import SongLibrary from './SongLibrary'
 import PlaylistManager from './PlaylistManager'
 import MinistryManager from './MinistryManager'
 import UserManager from './UserManager'
 import ProfileSettings from './ProfileSettings'
+import { Availability } from './Availability'
 import { DashboardView } from './DashboardView'
 import { Button } from './ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -55,7 +56,7 @@ interface Ministry {
 
 export default function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'songs' | 'playlists' | 'ministries' | 'users' | 'settings' | 'home'>('home')
+  const [activeTab, setActiveTab] = useState<'songs' | 'playlists' | 'ministries' | 'users' | 'settings' | 'home' | 'availability'>('home')
   const [ministry, setMinistry] = useState<Ministry | null>(null)
   const [selectedMinistryId, setSelectedMinistryId] = useState<string | undefined>(() => {
     try {
@@ -180,6 +181,8 @@ export default function Dashboard({ user, onLogout, onUserUpdate }: DashboardPro
         return (user.role === 'main_admin' || user.role === 'sub_admin') 
           ? <UserManager {...commonProps} ministryId={selectedMinistryId} /> 
           : null
+      case 'availability':
+        return <Availability {...commonProps} />
       case 'settings':
         return (
           <ProfileSettings 

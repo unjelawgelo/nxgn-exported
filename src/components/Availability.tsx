@@ -214,7 +214,7 @@ export function Availability({ user, ministryId }: AvailabilityProps) {
                   </div>
                 </div>
                 
-                <div className={`transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden transform-gpu will-change-[max-height,opacity,margin] ${
+                <div className={`transition-all duration-400 ease-in-out overflow-hidden transform-gpu will-change-[max-height,opacity,margin] ${
                   showSaveButton 
                     ? 'max-h-40 opacity-100 mt-4' 
                     : 'max-h-0 opacity-0 mt-0 overflow-hidden pointer-events-none'
@@ -256,12 +256,12 @@ export function Availability({ user, ministryId }: AvailabilityProps) {
                   </div>
                 </div>
                 
-                <div className={`transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden transform-gpu will-change-[max-height,opacity,margin] ${
+                <div className={`transition-all duration-500 ease-in-out overflow-hidden transform-gpu will-change-[max-height,opacity,margin] ${
                   (showSaveButton || isStatusSaved) 
                     ? 'max-h-32 opacity-100 mt-4' 
                     : 'max-h-0 opacity-0 mt-0 pointer-events-none overflow-hidden'
                 }`}>
-                  <div className={`transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] ${!showSaveButton ? 'pt-0 border-t-0' : 'pt-4 border-t'} flex gap-2`}>
+                  <div className={`transition-all duration-400 ease-in-out ${!showSaveButton ? 'pt-0 border-t-0' : 'pt-4 border-t'} flex gap-2`}>
                     {isStatusSaved && (
                       <Button 
                         variant="outline"

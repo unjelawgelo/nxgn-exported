@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Button } from '../ui/button';
 import { LogOut, User as UserIcon, Settings as SettingsIcon, Check, ChevronDown } from 'lucide-react';
@@ -44,26 +44,46 @@ export function ProfileDropdown({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const confirm = useConfirm();
 
-  // Close dropdowns when clicking outside
+  // Handle click outside and prevent body scroll when dropdown is open
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-        setIsMinistryDropdownOpen(false);
-      }
+    // Set the header height CSS variable
+    const header = document.querySelector('header');
+    if (header) {
+      document.documentElement.style.setProperty('--header-height', `${header.offsetHeight}px`);
     }
 
-    // Close ministry dropdown when main dropdown closes
-    if (!isOpen) {
+    function handleClickOutside(event: MouseEvent) {
+      if (isOpen && dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        closeDropdown();
+      }
       setIsMinistryDropdownOpen(false);
     }
 
     // Only add the event listener when the dropdown is open
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
+      document.body.style.overflow = 'hidden';
+      document.body.style.pointerEvents = 'none';
+      if (dropdownRef.current) {
+        dropdownRef.current.style.pointerEvents = 'auto';
+      }
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.pointerEvents = '';
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.body.style.overflow = '';
+      document.body.style.pointerEvents = '';
+    };
+  }, [isOpen, isMinistryDropdownOpen]);
+
+  const closeDropdown = useCallback(() => {
+    if (isOpen) {
+      setIsOpen(false);
+      document.body.style.overflow = '';
+      document.body.style.pointerEvents = '';
     }
   }, [isOpen]);
 
@@ -78,12 +98,31 @@ export function ProfileDropdown({
 
   return (
     <div className={cn('relative', className)} ref={dropdownRef}>
-      <Button
-        variant="ghost"
-        className="p-0 h-auto rounded-full hover:bg-accent/50"
-        onClick={() => setIsOpen(!isOpen)}
-        aria-label="User menu"
-        aria-expanded={isOpen}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40" 
+          style={{
+            top: 'var(--header-height, 64px)',
+            height: 'calc(100vh - var(--header-height, 64px))'
+          }}
+          onClick={closeDropdown} 
+        />
+      )}
+      <button
+        onClick={() => {
+          setIsOpen(!isOpen);
+          if (!isOpen) {
+            document.body.style.overflow = 'hidden';
+            document.body.style.pointerEvents = 'none';
+            if (dropdownRef.current) {
+              dropdownRef.current.style.pointerEvents = 'auto';
+            }
+          } else {
+            document.body.style.overflow = '';
+            document.body.style.pointerEvents = '';
+          }
+        }}
+        className="flex items-center space-x-2 focus:outline-none relative z-50"
       >
         <Avatar className="h-8 w-8">
           <AvatarImage src={user.profilePhoto} alt={user.name} />
@@ -91,11 +130,18 @@ export function ProfileDropdown({
             {getInitials(user.name)}
           </AvatarFallback>
         </Avatar>
-      </Button>
+      </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 rounded-lg border bg-card shadow-lg z-50">
-          <div className="p-4 border-b">
+        <div
+          className={cn(
+            'fixed right-4 mt-2 w-56 rounded-md z-50 bg-card text-card-foreground shadow-[0_4px_12px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.3)]',
+            isOpen ? 'block' : 'hidden',
+            className
+          )}
+          style={{ top: 'calc(100% + 0.5rem)' }}
+        >
+          <div className="p-4">
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
                 <AvatarImage src={user.profilePhoto} alt={user.name} />
@@ -184,12 +230,13 @@ export function ProfileDropdown({
           )}
 
           <div className="p-1">
+            <div className="border-t border-border my-1"></div>
             <Button
               variant="ghost"
               className="w-full justify-start text-sm font-normal"
               onClick={() => {
                 onProfileClick();
-                setIsOpen(false);
+                closeDropdown();
               }}
             >
               <UserIcon className="mr-2 h-4 w-4" />
@@ -197,8 +244,15 @@ export function ProfileDropdown({
             </Button>
             <Button
               variant="ghost"
-              className="w-full justify-start text-sm font-normal"
-              onClick={async () => {
+              className="w-full justify-start text-sm font-normal text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/30 dark:hover:text-red-300"
+              onClick={async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Close the dropdown first
+                closeDropdown();
+                
+                // Show confirmation dialog
                 const confirmed = await confirm({
                   title: 'Sign Out',
                   message: 'Are you sure you want to sign out?',
@@ -206,8 +260,11 @@ export function ProfileDropdown({
                   cancelText: 'Cancel',
                   variant: 'destructive'
                 });
+                
                 if (confirmed) {
                   onLogout();
+                } else {
+                  // If cancelled, the dropdown will remain closed but we've already cleaned up
                 }
               }}
             >

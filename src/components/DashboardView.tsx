@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User } from './App';
+import { User } from '../App';
 import { api } from '../lib/api';
 import { Church, Users, Music, ListMusic } from 'lucide-react';
 import { StatsCard } from './ui/StatsCard';

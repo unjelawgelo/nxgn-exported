@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { User } from './App';
+import { User } from '../App';
 import { api } from '../lib/api';
 import { Users, Shield, FileText, BarChart2, Settings, AlertCircle, ListMusic } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -92,16 +92,16 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight">Admin Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
+    <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+      <div className="space-y-2 mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Admin Dashboard</h1>
+        <p className="text-sm md:text-base text-muted-foreground">
           Overview of system-wide metrics and administration
         </p>
       </div>
 
       {error && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="mb-6">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Partial Data Available</AlertTitle>
           <AlertDescription>
@@ -111,60 +111,62 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
       )}
 
       {/* Quick Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        <Card className="h-full transition-all hover:shadow-md">
+          <CardHeader className="flex flex-row items-center justify-between p-3 pb-0">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 rounded-full bg-primary/10 text-primary flex-shrink-0">
+              <Users className="h-4 w-4" />
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-4 pt-0">
             <div className="text-2xl font-bold">{stats.totalUsers}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground pt-2">
               Across all ministries
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+        <Card className="h-full transition-all hover:shadow-md">
+          <CardHeader className="flex flex-row items-center justify-between p-3 pb-0">
             <CardTitle className="text-sm font-medium">Total Ministries</CardTitle>
-            <Shield className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {stats.totalMinistries}
+            <div className="p-2 rounded-full bg-primary/10 text-primary flex-shrink-0">
+              <Shield className="h-4 w-4" />
             </div>
-            <p className="text-xs text-muted-foreground">
+          </CardHeader>
+          <CardContent className="px-4 pb-4 pt-0">
+            <div className="text-2xl font-bold">{stats.totalMinistries}</div>
+            <p className="text-xs text-muted-foreground pt-2">
               Registered ministries
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+        <Card className="h-full transition-all hover:shadow-md">
+          <CardHeader className="flex flex-row items-center justify-between p-3 pb-0">
             <CardTitle className="text-sm font-medium">Total Songs</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {stats.totalSongs}
+            <div className="p-2 rounded-full bg-primary/10 text-primary flex-shrink-0">
+              <FileText className="h-4 w-4" />
             </div>
-            <p className="text-xs text-muted-foreground">
+          </CardHeader>
+          <CardContent className="px-4 pb-4 pt-0">
+            <div className="text-2xl font-bold">{stats.totalSongs}</div>
+            <p className="text-xs text-muted-foreground pt-2">
               In the library
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+        <Card className="h-full transition-all hover:shadow-md">
+          <CardHeader className="flex flex-row items-center justify-between p-3 pb-0">
             <CardTitle className="text-sm font-medium">Playlists</CardTitle>
-            <ListMusic className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {stats.totalArrangements}
+            <div className="p-2 rounded-full bg-primary/10 text-primary flex-shrink-0">
+              <ListMusic className="h-4 w-4" />
             </div>
-            <p className="text-xs text-muted-foreground">
+          </CardHeader>
+          <CardContent className="px-4 pb-4 pt-0">
+            <div className="text-2xl font-bold">{stats.totalArrangements}</div>
+            <p className="text-xs text-muted-foreground pt-2">
               {stats.totalArrangements === 1 ? 'Playlist' : 'Playlists'} across all ministries
             </p>
           </CardContent>
@@ -172,25 +174,25 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
       </div>
 
       {/* Quick Actions and System Info */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+      <div className="grid gap-6 md:grid-cols-2 mt-8">
+        <Card className="transition-all hover:shadow-md">
           <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
+            <CardTitle className="text-lg">Quick Actions</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-3">
-            <Button variant="outline" className="justify-start">
+          <CardContent className="space-y-3">
+            <Button variant="outline" className="w-full justify-start">
               <FileText className="mr-2 h-4 w-4" />
               Create New Ministry
             </Button>
-            <Button variant="outline" className="justify-start">
+            <Button variant="outline" className="w-full justify-start">
               <Users className="mr-2 h-4 w-4" />
               Manage Users
             </Button>
-            <Button variant="outline" className="justify-start">
+            <Button variant="outline" className="w-full justify-start">
               <BarChart2 className="mr-2 h-4 w-4" />
               View Analytics
             </Button>
-            <Button variant="outline" className="justify-start">
+            <Button variant="outline" className="w-full justify-start">
               <Settings className="mr-2 h-4 w-4" />
               System Settings
             </Button>
@@ -198,22 +200,22 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
         </Card>
 
         {/* System Information */}
-        <Card>
+        <Card className="transition-all hover:shadow-md">
           <CardHeader>
-            <CardTitle>System Information</CardTitle>
+            <CardTitle className="text-lg">System Information</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between py-2 border-b">
               <span className="text-sm text-muted-foreground">Version</span>
               <span className="text-sm font-medium">1.0.0</span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between py-2 border-b">
               <span className="text-sm text-muted-foreground">Last Updated</span>
               <span className="text-sm font-medium">
                 {new Date().toLocaleDateString()}
               </span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between pt-2">
               <span className="text-sm text-muted-foreground">Environment</span>
               <span className="text-sm font-medium">
                 {process.env.NODE_ENV === 'production' ? 'Production' : 'Development'}

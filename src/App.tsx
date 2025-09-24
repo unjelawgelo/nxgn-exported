@@ -8,6 +8,7 @@ import { ConfirmProvider } from './hooks/ConfirmProvider'
 export interface User {
   id: string
   name: string
+  email: string
   pincode: string
   role: string
   profilePhoto?: string

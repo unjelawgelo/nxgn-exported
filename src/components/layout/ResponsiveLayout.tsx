@@ -74,11 +74,11 @@ export function ResponsiveLayout({
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">
-      {/* Animated hamburger button with delay when showing up */}
+      {/* Animated hamburger button with delay when showing up - hidden on mobile, visible on desktop */}
       <div className={`fixed top-3 left-2 z-50 transition-all duration-300 ease-in-out ${
         isMobileMenuOpen 
           ? 'opacity-0 -translate-x-2 pointer-events-none' 
-          : 'opacity-0 [animation:fadeIn_0.3s_ease-out_0.3s_forwards]'
+          : 'opacity-0 [animation:fadeIn_0.3s_ease-out_0.3s_forwards] md:hidden'
       }`}>
         <style dangerouslySetInnerHTML={{
           __html: `

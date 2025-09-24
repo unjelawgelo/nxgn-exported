@@ -40,9 +40,30 @@ export function ProfileDropdown({
   className = '',
 }: ProfileDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isMinistryDropdownOpen, setIsMinistryDropdownOpen] = useState(false);
+  const [showMinistryDropdown, setShowMinistryDropdown] = useState(false);
+  const [selectedMinistryName, setSelectedMinistryName] = useState(
+    () => ministries.find(m => m.id === selectedMinistryId)?.name || 'Select Ministry'
+  );
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const ministryDropdownRef = useRef<HTMLDivElement>(null);
   const confirm = useConfirm();
+  
+  const handleMinistryChange = (e: React.ChangeEvent<HTMLSelectElement> | { target: { value: string } }) => {
+    const ministryId = e.target.value;
+    const selected = ministries.find(m => m.id === ministryId);
+    if (selected) {
+      setSelectedMinistryName(selected.name);
+      onMinistryChange?.(ministryId);
+    }
+  };
+  
+  // Update selected ministry name when ministries or selectedMinistryId changes
+  useEffect(() => {
+    const selected = ministries.find(m => m.id === selectedMinistryId);
+    if (selected) {
+      setSelectedMinistryName(selected.name);
+    }
+  }, [ministries, selectedMinistryId]);
 
   // Handle click outside and prevent body scroll when dropdown is open
   useEffect(() => {
@@ -53,19 +74,26 @@ export function ProfileDropdown({
     }
 
     function handleClickOutside(event: MouseEvent) {
+      // Check if click is outside profile dropdown
       if (isOpen && dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         closeDropdown();
       }
-      setIsMinistryDropdownOpen(false);
+      // Check if click is outside ministry dropdown
+      if (showMinistryDropdown && ministryDropdownRef.current && !ministryDropdownRef.current.contains(event.target as Node)) {
+        setShowMinistryDropdown(false);
+      }
     }
 
-    // Only add the event listener when the dropdown is open
-    if (isOpen) {
+    // Only add the event listener when either dropdown is open
+    if (isOpen || showMinistryDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
-      document.body.style.overflow = 'hidden';
-      document.body.style.pointerEvents = 'none';
-      if (dropdownRef.current) {
-        dropdownRef.current.style.pointerEvents = 'auto';
+      
+      if (isOpen) {
+        document.body.style.overflow = 'hidden';
+        document.body.style.pointerEvents = 'none';
+        if (dropdownRef.current) {
+          dropdownRef.current.style.pointerEvents = 'auto';
+        }
       }
     } else {
       document.body.style.overflow = '';
@@ -77,7 +105,7 @@ export function ProfileDropdown({
       document.body.style.overflow = '';
       document.body.style.pointerEvents = '';
     };
-  }, [isOpen, isMinistryDropdownOpen]);
+  }, [isOpen, showMinistryDropdown]);
 
   const closeDropdown = useCallback(() => {
     if (isOpen) {
@@ -135,7 +163,7 @@ export function ProfileDropdown({
       {isOpen && (
         <div
           className={cn(
-            'fixed right-4 mt-2 w-56 rounded-md z-50 bg-card text-card-foreground shadow-[0_4px_12px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.3)]',
+            'fixed right-4 mt-2 w-60 rounded-md z-50 bg-card text-card-foreground shadow-[0_4px_12px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.3)]',
             isOpen ? 'block' : 'hidden',
             className
           )}
@@ -185,44 +213,48 @@ export function ProfileDropdown({
           </div>
 
           {ministries.length > 0 && onMinistryChange && selectedMinistryId && (
-            <div className="p-3 border-b">
-              <label className="block text-xs font-medium text-muted-foreground mb-1 px-1">
+            <div className="p-3 border-b border-border">
+              <label className="block text-xs font-medium text-muted-foreground mb-2 px-1">
                 Switch Ministry
               </label>
-              <div className="relative">
+              <div className="relative" ref={ministryDropdownRef}>
                 <div 
-                  className="w-full flex items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background cursor-pointer"
+                  className="relative w-full flex items-center justify-between rounded-lg border border-input bg-background/80 pl-3 pr-8 py-2 text-sm cursor-pointer hover:bg-accent/50 transition-colors"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setIsMinistryDropdownOpen(!isMinistryDropdownOpen);
+                    setShowMinistryDropdown(!showMinistryDropdown);
                   }}
                 >
-                  <span>{ministries.find(m => m.id === selectedMinistryId)?.name || 'Select ministry'}</span>
+                  <span className="truncate">{selectedMinistryName}</span>
                   <ChevronDown 
-                    className={`h-4 w-4 opacity-50 transition-transform ${isMinistryDropdownOpen ? 'rotate-180' : ''}`} 
+                    className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${showMinistryDropdown ? 'rotate-180' : ''}`}
                   />
                 </div>
-                {isMinistryDropdownOpen && (
-                  <div 
-                    className="absolute z-10 w-full mt-1 bg-popover text-popover-foreground rounded-md border shadow-md max-h-60 overflow-y-auto"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                  {ministries.map((ministry) => (
-                    <div
-                      key={ministry.id}
-                      className="relative flex w-full cursor-pointer select-none items-center justify-between rounded-sm px-3 py-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
-                      onClick={(e) => {
-                        e.stopPropagation(); // Prevent event bubbling
-                        onMinistryChange(ministry.id);
-                        setIsMinistryDropdownOpen(false); // Only close the ministry dropdown, not the profile dropdown
-                      }}
-                    >
-                      <span>{ministry.name}</span>
-                      {selectedMinistryId === ministry.id && (
-                        <Check className="h-4 w-4 text-primary" />
-                      )}
+                
+                {showMinistryDropdown && (
+                  <div className="absolute z-50 w-full mt-1 bg-popover text-popover-foreground rounded-lg border shadow-lg overflow-hidden">
+                    <div className="max-h-60 overflow-y-auto">
+                      {ministries.map((ministry) => (
+                        <div
+                          key={ministry.id}
+                          className="relative flex items-center justify-between px-3 py-2 text-sm cursor-pointer hover:bg-accent/50"
+                          onMouseDown={(e) => {
+                            // Use onMouseDown to prevent the click from triggering the outside click handler
+                            e.preventDefault();
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMinistryChange({ target: { value: ministry.id } } as any);
+                            setShowMinistryDropdown(false);
+                          }}
+                        >
+                          <span className="flex-1">{ministry.name}</span>
+                          {selectedMinistryId === ministry.id && (
+                            <Check className="h-4 w-4 text-primary ml-2 flex-shrink-0" />
+                          )}
+                        </div>
+                      ))}
                     </div>
-                  ))}
                   </div>
                 )}
               </div>
@@ -233,7 +265,7 @@ export function ProfileDropdown({
             <div className="border-t border-border my-1"></div>
             <Button
               variant="ghost"
-              className="w-full justify-start text-sm font-normal"
+              className="w-full justify-start text-sm font-normal hover:bg-transparent active:bg-black active:text-white-600"
               onClick={() => {
                 onProfileClick();
                 closeDropdown();
@@ -244,7 +276,7 @@ export function ProfileDropdown({
             </Button>
             <Button
               variant="ghost"
-              className="w-full justify-start text-sm font-normal text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/30 dark:hover:text-red-300"
+              className="w-full justify-start text-sm font-normal text-red-600 hover:bg-transparent hover:text-red-600 active:bg-black active:text-red dark:text-red-400 dark:hover:bg-transparent dark:hover:text-red-400"
               onClick={async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -269,7 +301,7 @@ export function ProfileDropdown({
               }}
             >
               <LogOut className="mr-2 h-4 w-4" />
-              Sign out
+              Sign Out
             </Button>
           </div>
         </div>

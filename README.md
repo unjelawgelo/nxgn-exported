@@ -23,14 +23,16 @@ This starter was crafted **solely for the Next Generation of the Worship Team** 
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-username/your-repo-name.git
-cd your-repo-name
+git clone https://github.com/unjelawgelo/nxgn-exported.git
+cd nxgn-exported
 
 # 2. Install dependencies
 npm install
 
-# 3. Start development server
+# 3. Start the development server
 npm run dev
 
 # 4. Build for production
+npm run build
+oduction
 npm run build

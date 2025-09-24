@@ -23,7 +23,6 @@ export function DashboardView({ user, ministryId }: DashboardViewProps) {
   if (user.role === 'main_admin') {
     return <AdminDashboard user={user} />;
   }
-
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

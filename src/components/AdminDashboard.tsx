@@ -173,33 +173,8 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
         </Card>
       </div>
 
-      {/* Quick Actions and System Info */}
-      <div className="grid gap-6 md:grid-cols-2 mt-8">
-        <Card className="transition-all hover:shadow-md">
-          <CardHeader>
-            <CardTitle className="text-lg">Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button variant="outline" className="w-full justify-start">
-              <FileText className="mr-2 h-4 w-4" />
-              Create New Ministry
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              <Users className="mr-2 h-4 w-4" />
-              Manage Users
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              <BarChart2 className="mr-2 h-4 w-4" />
-              View Analytics
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              <Settings className="mr-2 h-4 w-4" />
-              System Settings
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* System Information */}
+      {/* System Information */}
+      <div className="grid gap-6 md:grid-cols-1 mt-8">
         <Card className="transition-all hover:shadow-md">
           <CardHeader>
             <CardTitle className="text-lg">System Information</CardTitle>

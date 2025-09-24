@@ -173,24 +173,49 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
         </Card>
       </div>
 
-      {/* System Information */}
-      <div className="mt-8">
+      {/* Quick Actions and System Info */}
+      <div className="grid gap-6 md:grid-cols-2 mt-8">
         <Card className="transition-all hover:shadow-md">
-          <CardHeader className="pb-3">
+          <CardHeader>
+            <CardTitle className="text-lg">Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button variant="outline" className="w-full justify-start">
+              <FileText className="mr-2 h-4 w-4" />
+              Create New Ministry
+            </Button>
+            <Button variant="outline" className="w-full justify-start">
+              <Users className="mr-2 h-4 w-4" />
+              Manage Users
+            </Button>
+            <Button variant="outline" className="w-full justify-start">
+              <BarChart2 className="mr-2 h-4 w-4" />
+              View Analytics
+            </Button>
+            <Button variant="outline" className="w-full justify-start">
+              <Settings className="mr-2 h-4 w-4" />
+              System Settings
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* System Information */}
+        <Card className="transition-all hover:shadow-md">
+          <CardHeader>
             <CardTitle className="text-lg">System Information</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 px-6 pb-6 pt-0">
-            <div className="flex items-center justify-between py-3 border-b">
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between py-2 border-b">
               <span className="text-sm text-muted-foreground">Version</span>
               <span className="text-sm font-medium">1.0.0</span>
             </div>
-            <div className="flex items-center justify-between py-3 border-b">
+            <div className="flex items-center justify-between py-2 border-b">
               <span className="text-sm text-muted-foreground">Last Updated</span>
               <span className="text-sm font-medium">
                 {new Date().toLocaleDateString()}
               </span>
             </div>
-            <div className="flex items-center justify-between pt-3">
+            <div className="flex items-center justify-between pt-2">
               <span className="text-sm text-muted-foreground">Environment</span>
               <span className="text-sm font-medium">
                 {process.env.NODE_ENV === 'production' ? 'Production' : 'Development'}

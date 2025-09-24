@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { blink } from '../blink/client'
 import { User } from '../App'
-import { Search, Filter, Plus, Music, Edit, Trash2, RefreshCw, Loader2 } from 'lucide-react'
+import { Search, Filter, Plus, Music, Pencil, FileEdit, Trash2, Trash, RefreshCw, Loader2 } from 'lucide-react'
 import { useNotifications } from '../hooks/useNotifications'
 import { useConfirm } from '../hooks/useConfirm'
 import { Button } from './ui/button'
@@ -11,6 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { Textarea } from './ui/textarea'
 import { Label } from './ui/label'
+
+import { PageSkeleton, ListSkeleton } from '../components/ui/loading-skeleton'
 
 interface Song {
   id: string
@@ -50,10 +52,21 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
   const [contentFontSize, setContentFontSize] = useState(15)
   const [displayMode, setDisplayMode] = useState<'both' | 'lyrics' | 'chords'>('both')
   const [cardDisplayModes, setCardDisplayModes] = useState<Record<string, 'both' | 'lyrics' | 'chords'>>({})
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const setCardMode = (songId: string, mode: 'both' | 'lyrics' | 'chords') => {
     setCardDisplayModes(prev => ({ ...prev, [songId]: mode }))
   }
+
+  const adjustTextareaHeight = (element: HTMLTextAreaElement) => {
+    element.style.height = 'auto'
+    element.style.height = `${element.scrollHeight}px`
+  }
+
+  useEffect(() => {
+    if (!textareaRef.current) return
+    adjustTextareaHeight(textareaRef.current)
+  }, [lyrics, chords])
 
   const decreaseFont = () => setContentFontSize(s => Math.max(12, s - 2))
   const increaseFont = () => setContentFontSize(s => Math.min(36, s + 2))
@@ -194,53 +207,76 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
     setLyrics(song.lyrics || '')
     setChords(song.chords || '')
     setCategory(song.category as 'Worship' | 'Praise')
+    
+    // Force a re-render to ensure text areas are properly sized
+    setTimeout(() => {
+      const lyricsTextarea = document.getElementById('lyrics') as HTMLTextAreaElement
+      const chordsTextarea = document.getElementById('chords') as HTMLTextAreaElement
+      
+      if (lyricsTextarea) {
+        lyricsTextarea.style.height = 'auto'
+        lyricsTextarea.style.height = `${Math.max(lyricsTextarea.scrollHeight, 300)}px`
+      }
+      if (chordsTextarea) {
+        chordsTextarea.style.height = 'auto'
+        chordsTextarea.style.height = `${Math.max(chordsTextarea.scrollHeight, 200)}px`
+      }
+    }, 10)
   }
 
   if (loading && songs.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-muted-foreground">Loading songs...</div>
-      </div>
+      <PageSkeleton 
+        withHeader={true}
+        withSearch={true}
+        withFilters={true}
+        contentSkeleton={() => <ListSkeleton count={5} />}
+      />
     )
   }
 
   return (
     <div className="h-full flex flex-col p-4">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold text-foreground">Song Library</h2>
-        {canEdit && (
-          <Button onClick={() => setShowAddModal(true)} className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Add Song
-          </Button>
-        )}
-      </div>
-
-      {/* Search and Filter */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Search songs..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+      {/* Header with search, filter, and add button */}
+      <div className="flex flex-col space-y-3 mb-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-foreground">Song Library</h2>
+          {canEdit && (
+            <Button 
+              onClick={() => setShowAddModal(true)} 
+              size="icon"
+              className="h-9 w-9 bg-blue-600 hover:bg-blue-700 text-white"
+              aria-label="Add song"
+            >
+              <Plus className="h-5 w-5" />
+            </Button>
+          )}
         </div>
         
-        <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as 'All' | 'Worship' | 'Praise')}>
-          <SelectTrigger className="w-[180px]">
-            <Filter className="h-4 w-4 mr-2" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="All">All Categories</SelectItem>
-            <SelectItem value="Worship">Worship</SelectItem>
-            <SelectItem value="Praise">Praise</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search songs..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-10"
+            />
+          </div>
+          
+          <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as 'All' | 'Worship' | 'Praise')}>
+            <SelectTrigger className="w-[140px]">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All</SelectItem>
+              <SelectItem value="Worship">Worship</SelectItem>
+              <SelectItem value="Praise">Praise</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Songs List */}
@@ -266,31 +302,39 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
               >
                 {/* Edit/Delete buttons - top right inside card */}
                 {canEdit && (
-                  <div className="absolute top-2 right-2 flex items-center gap-2 z-10" onClick={(e) => e.stopPropagation()}>
+                  <div className="absolute top-2 right-2 flex items-center gap-0.5 z-10 bg-background/80 backdrop-blur-sm rounded-md p-1" onClick={(e) => e.stopPropagation()}>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => openEditModal(song)}
-                      className="p-2 h-auto w-auto text-muted-foreground hover:text-primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditModal(song);
+                      }}
+                      className="p-1.5 h-auto w-auto text-muted-foreground hover:text-foreground hover:bg-muted rounded"
                       aria-label={`Edit ${song.title}`}
                     >
-                      <Edit className="h-4 w-4" />
+                      <Pencil className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleDeleteSong(song.id)}
-                      className="p-2 h-auto w-auto text-muted-foreground hover:text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteSong(song.id);
+                      }}
+                      className="p-1.5 h-auto w-auto text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded"
                       aria-label={`Delete ${song.title}`}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash className="h-4 w-4" />
                     </Button>
                   </div>
                 )}
 
                 <div className="flex flex-col sm:flex-row items-start justify-between">
-                  <div className="flex-1 min-w-0 pr-6">
-                    <h3 className="font-medium text-foreground mb-1 truncate">{song.title}</h3>
+                  <div className="flex-1 min-w-0 pr-6 relative group">
+                    <h3 className="font-medium text-foreground mb-1 truncate transition-all duration-200 group-has-[.edit-buttons:hover]:text-sm">
+                      {song.title}
+                    </h3>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                       <span className={`px-2 py-1 rounded text-xs ${
                         song.category === 'Worship' 
@@ -319,7 +363,7 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
         )}
       </div>
 
-      {/* Add/Edit Modal */}
+      {/* Add/Edit Modal - Full Screen */}
       <Dialog open={showAddModal || !!editingSong} onOpenChange={(open) => {
         if (!open) {
           setShowAddModal(false)
@@ -327,77 +371,113 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
           resetForm()
         }
       }}>
-        <DialogContent className="w-full max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingSong ? 'Edit Song' : 'Add New Song'}
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent className="w-[calc(100%-2rem)] h-[calc(100vh-2rem)] max-w-none mx-auto my-4 rounded-lg p-0 overflow-hidden flex flex-col">
+          <div className="p-3 border-b sticky top-0 bg-background z-10">
+            <DialogHeader className="space-y-0">
+              <DialogTitle className="text-xl">
+                {editingSong ? 'Edit Song' : 'Add New Song'}
+              </DialogTitle>
+            </DialogHeader>
+          </div>
           
-          <form onSubmit={editingSong ? handleEditSong : handleAddSong} className="space-y-4">
-            <div>
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-              />
+          <form 
+            onSubmit={editingSong ? handleEditSong : handleAddSong} 
+            className="flex-1 flex flex-col overflow-hidden"
+          >
+            <div className="p-4 space-y-4 flex-1 overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-3 md:col-span-1">
+                  <div>
+                    <Label htmlFor="title">Title</Label>
+                    <Input
+                      id="title"
+                      type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      className="text-base py-2 h-auto"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="category">Category</Label>
+                    <Select value={category} onValueChange={(value) => setCategory(value as 'Worship' | 'Praise')}>
+                      <SelectTrigger className="h-11 text-base">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Worship" className="text-base">Worship</SelectItem>
+                        <SelectItem value="Praise" className="text-base">Praise</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="md:col-span-2 space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="lyrics">Lyrics</Label>
+                    <div className="relative border rounded-md overflow-hidden">
+                      <textarea
+                        ref={textareaRef}
+                        id="lyrics"
+                        value={lyrics}
+                        onChange={(e) => {
+                          setLyrics(e.target.value)
+                          adjustTextareaHeight(e.target)
+                        }}
+                        placeholder="Enter song lyrics..."
+                        className="min-h-[300px] w-full p-4 text-base font-mono resize-none focus-visible:outline-none border-0 bg-transparent"
+                        style={{ minHeight: '300px' }}
+                        rows={1}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="chords">Chords</Label>
+                    <div className="relative border rounded-md overflow-hidden">
+                      <textarea
+                        id="chords"
+                        value={chords}
+                        onChange={(e) => {
+                          setChords(e.target.value)
+                          adjustTextareaHeight(e.target)
+                        }}
+                        placeholder="Enter chord progressions..."
+                        className="min-h-[200px] w-full p-4 text-base font-mono resize-none focus-visible:outline-none border-0 bg-transparent"
+                        style={{ minHeight: '200px' }}
+                        rows={1}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div>
-              <Label htmlFor="category">Category</Label>
-              <Select value={category} onValueChange={(value) => setCategory(value as 'Worship' | 'Praise')}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Worship">Worship</SelectItem>
-                  <SelectItem value="Praise">Praise</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="lyrics">Lyrics</Label>
-              <Textarea
-                id="lyrics"
-                value={lyrics}
-                onChange={(e) => setLyrics(e.target.value)}
-                rows={6}
-                placeholder="Enter song lyrics..."
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="chords">Chords</Label>
-              <Textarea
-                id="chords"
-                value={chords}
-                onChange={(e) => setChords(e.target.value)}
-                rows={4}
-                placeholder="Enter chord progressions..."
-              />
-            </div>
-
-            <div className="flex justify-end gap-3">
+            <div className="p-4 border-t flex justify-end gap-3 bg-background/80 backdrop-blur-sm sticky bottom-0">
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 onClick={() => {
                   setShowAddModal(false)
                   setEditingSong(null)
                   resetForm()
                 }}
+                className="px-6 h-11"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={loading}
+                className="px-6 h-11"
               >
-                {loading ? 'Saving...' : editingSong ? 'Update Song' : 'Add Song'}
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : editingSong ? 'Update Song' : 'Add Song'}
               </Button>
             </div>
           </form>
@@ -406,22 +486,15 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
 
       {/* View Modal */}
       <Dialog open={!!viewingSong} onOpenChange={(open) => !open && setViewingSong(null)}>
-        <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>{viewingSong?.title}</DialogTitle>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1 bg-card p-1 rounded">
-                  <Button variant="outline" size="sm" onClick={decreaseFont} className="px-2 py-1 h-auto">A-</Button>
-                  <Button variant="outline" size="sm" onClick={increaseFont} className="px-2 py-1 h-auto">A+</Button>
-                  <Button variant="outline" size="sm" onClick={resetFont} className="px-2 py-1 h-auto"><RefreshCw className="h-4 w-4" /></Button>
-                </div>
-              </div>
-            </div>
-          </DialogHeader>
-          
+        <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-0">
           {viewingSong && (
-            <div>
+            <div className="p-6">
+              <DialogHeader className="mb-4 text-left">
+                <DialogTitle className="text-2xl">
+                  {viewingSong.title}
+                </DialogTitle>
+              </DialogHeader>
+              
               <div className="flex items-center gap-3 mb-4">
                 <span className={`px-3 py-1 rounded text-sm ${
                   viewingSong.category === 'Worship' 
@@ -430,25 +503,51 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
                 }`}>
                   {viewingSong.category}
                 </span>
-
-                <div className="flex flex-wrap gap-2 ml-auto">
-                  {(['both','lyrics','chords'] as const).map((m) => (
-                    <Button
-                      key={m}
-                      variant={displayMode === m ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setDisplayMode(m)}
-                      className="text-sm"
-                    >
-                      {m === 'both' ? 'Both' : m === 'lyrics' ? 'Lyrics' : 'Chords'}
-                    </Button>
-                  ))}
+                
+                <div className="flex-1 flex justify-end">
+                  <div className="flex items-center gap-2">
+                    {(['both','chords','lyrics'] as const).map((m) => (
+                      <Button
+                        key={m}
+                        variant={displayMode === m ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setDisplayMode(m)}
+                        className="text-sm"
+                      >
+                        {m === 'both' ? 'Both' : m === 'lyrics' ? 'Lyrics' : 'Chords'}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
               {(displayMode === 'both' || displayMode === 'lyrics') && viewingSong.lyrics && (
                 <div className="mb-6">
-                  <h4 className="font-medium text-foreground mb-2">Lyrics</h4>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium text-foreground">Lyrics</h4>
+                    <div className="flex items-center gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={decreaseFont} 
+                        className="px-2 py-1 h-auto hover:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0"
+                      >A-</Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={increaseFont} 
+                        className="px-2 py-1 h-auto hover:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0"
+                      >A+</Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={resetFont} 
+                        className="px-2 py-1 h-auto hover:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
                   <Card>
                     <CardContent className="p-4">
                       <pre className="text-foreground whitespace-pre-wrap" style={{ fontSize: `${contentFontSize}px` }}>{viewingSong.lyrics}</pre>
@@ -459,7 +558,33 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
 
               {(displayMode === 'both' || displayMode === 'chords') && viewingSong.chords && (
                 <div className="mb-6">
-                  <h4 className="font-medium text-foreground mb-2">Chords</h4>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium text-foreground">Chords</h4>
+                    {displayMode === 'chords' && (
+                      <div className="flex items-center gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={decreaseFont} 
+                          className="px-2 py-1 h-auto hover:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0"
+                        >A-</Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={increaseFont} 
+                          className="px-2 py-1 h-auto hover:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0"
+                        >A+</Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={resetFont} 
+                          className="px-2 py-1 h-auto hover:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                   <Card>
                     <CardContent className="p-4">
                       <pre className="text-foreground whitespace-pre-wrap font-mono" style={{ fontSize: `${contentFontSize}px` }}>{viewingSong.chords}</pre>

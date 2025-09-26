@@ -366,15 +366,16 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
       {/* Add/Edit Modal - Full Screen */}
       <Dialog open={showAddModal || !!editingSong} onOpenChange={(open) => {
         if (!open) {
+          // Only reset the state, don't show any transition
           setShowAddModal(false)
           setEditingSong(null)
           resetForm()
         }
       }}>
         <DialogContent className="w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] h-[calc(100vh-2rem)] sm:h-[calc(100vh-3rem)] max-w-none mx-auto my-2 sm:my-4 rounded-lg p-0 overflow-hidden flex flex-col">
-          <div className="p-3 sm:p-4 border-b sticky top-0 bg-background z-10">
+          <div className="p-3 sm:p-4 pt-7 border-b sticky top-0 bg-background z-10">
             <DialogHeader className="space-y-0">
-              <DialogTitle className="text-lg sm:text-xl">
+              <DialogTitle className="text-xl sm:text-2xl font-semibold bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">
                 {editingSong ? 'Edit Song' : 'Add New Song'}
               </DialogTitle>
             </DialogHeader>
@@ -454,14 +455,23 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
               </div>
             </div>
 
-            <div className="p-4 border-t flex flex-row justify-end gap-3 bg-background/80 backdrop-blur-sm sticky bottom-0">
+            <div className="p-4 pb-10 border-t flex flex-row justify-end gap-3 bg-background/80 backdrop-blur-sm sticky bottom-0">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => {
-                  setShowAddModal(false)
-                  setEditingSong(null)
-                  resetForm()
+                onClick={(e) => {
+                  e.stopPropagation()
+                  // Close the dialog immediately without showing transition
+                  const dialog = document.querySelector('[role="dialog"]')
+                  if (dialog) {
+                    dialog.classList.add('opacity-0')
+                  }
+                  // Reset state after a short delay
+                  setTimeout(() => {
+                    setShowAddModal(false)
+                    setEditingSong(null)
+                    resetForm()
+                  }, 150)
                 }}
                 className="flex-1 sm:flex-none sm:w-auto px-4 sm:px-6 h-11"
               >

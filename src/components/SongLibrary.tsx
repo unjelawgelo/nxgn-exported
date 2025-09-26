@@ -6,11 +6,9 @@ import { useNotifications } from '../hooks/useNotifications'
 import { useConfirm } from '../hooks/useConfirm'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
-import { Card, CardContent } from './ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { Label } from './ui/label'
-
 import { PageSkeleton, ListSkeleton } from '../components/ui/loading-skeleton'
 
 interface Song {
@@ -157,7 +155,7 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
     let filtered = songs
 
     if (searchQuery) {
-      filtered = filtered.filter(song => 
+      filtered = filtered.filter(song =>
         song.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         song.lyrics.toLowerCase().includes(searchQuery.toLowerCase())
       )
@@ -207,8 +205,8 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
       const updatedFields = { title, lyrics, chords, category }
       const saved = await blink.db.songs.update(editingSong.id, updatedFields as any)
 
-      setSongs(prev => prev.map(song => 
-        song.id === editingSong.id 
+      setSongs(prev => prev.map(song =>
+        song.id === editingSong.id
           ? { ...song, ...(saved as Partial<Song>) }
           : song
       ))
@@ -255,11 +253,11 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
     setLyrics(song.lyrics || '')
     setChords(song.chords || '')
     setCategory(song.category as 'Worship' | 'Praise')
-    
+
     setTimeout(() => {
       const lyricsTextarea = document.getElementById('lyrics') as HTMLTextAreaElement
       const chordsTextarea = document.getElementById('chords') as HTMLTextAreaElement
-      
+
       if (lyricsTextarea) {
         lyricsTextarea.style.height = 'auto'
         lyricsTextarea.style.height = `${Math.max(lyricsTextarea.scrollHeight, 300)}px`
@@ -273,7 +271,7 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
 
   if (loading && songs.length === 0) {
     return (
-      <PageSkeleton 
+      <PageSkeleton
         withHeader={true}
         withSearch={true}
         withFilters={true}
@@ -289,8 +287,8 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold text-foreground">Song Library</h2>
           {canEdit && (
-            <Button 
-              onClick={() => setShowAddModal(true)} 
+            <Button
+              onClick={() => setShowAddModal(true)}
               size="icon"
               className="h-9 w-9 bg-blue-600 hover:bg-blue-700 text-white"
               aria-label="Add song"
@@ -299,7 +297,7 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
             </Button>
           )}
         </div>
-        
+
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -311,7 +309,7 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
               className="pl-10 h-10"
             />
           </div>
-          
+
           <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as 'All' | 'Worship' | 'Praise')}>
             <SelectTrigger className="w-[140px]">
               <Filter className="h-4 w-4 mr-2" />
@@ -333,8 +331,8 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
             <Music className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium text-foreground mb-2">No Songs Found</h3>
             <p className="text-muted-foreground mb-4">
-              {searchQuery || categoryFilter !== 'All' 
-                ? 'No songs match your search criteria' 
+              {searchQuery || categoryFilter !== 'All'
+                ? 'No songs match your search criteria'
                 : 'Get started by adding your first song'
               }
             </p>
@@ -375,8 +373,8 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
                     <h3 className="font-medium text-foreground mb-1 truncate transition-all">{song.title}</h3>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                       <span className={`px-2 py-1 rounded text-xs ${
-                        song.category === 'Worship' 
-                          ? 'bg-blue-500/20 text-blue-400' 
+                        song.category === 'Worship'
+                          ? 'bg-blue-500/20 text-blue-400'
                           : 'bg-orange-500/20 text-orange-400'
                       }`}>
                         {song.category}
@@ -391,7 +389,7 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
                           {preview}{text.length > 30 ? '...' : ''}
                         </div>
                       )
-                    })() }
+                    })()}
                   </div>
                 </div>
               </div>
@@ -412,7 +410,7 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
               </DialogTitle>
             </DialogHeader>
           </div>
-          
+
           <form onSubmit={editingSong ? handleEditSong : handleAddSong} className="flex-1 flex flex-col overflow-hidden">
             <div className="p-3 sm:p-4 space-y-4 flex-1 overflow-y-auto">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
@@ -468,7 +466,7 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
               </div>
             </div>
 
-            {/* devAngelo footer */}
+            {/* Footer */}
             <div className="p-4 pb-9 border-t flex flex-row justify-end gap-3 bg-background/80 backdrop-blur-sm sticky bottom-0">
               <Button
                 type="button"
@@ -510,8 +508,8 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
                   <DialogTitle className="text-xl pr-8">{viewingSong.title}</DialogTitle>
                   <div className="flex items-center gap-2 mt-2">
                     <span className={`px-2 py-1 rounded text-xs ${
-                      viewingSong.category === 'Worship' 
-                        ? 'bg-blue-500/20 text-blue-400' 
+                      viewingSong.category === 'Worship'
+                        ? 'bg-blue-500/20 text-blue-400'
                         : 'bg-orange-500/20 text-orange-400'
                     }`}>
                       {viewingSong.category}
@@ -519,29 +517,29 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
                   </div>
                 </DialogHeader>
               </div>
-              
+
               <div className="flex-1 overflow-y-auto p-4 space-y-6">
                 {/* View Controls */}
                 <div className="flex justify-between items-center flex-wrap gap-2 sticky top-0 bg-background/95 backdrop-blur-sm py-2 z-10">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <Button 
-                      variant={displayMode === 'both' ? 'default' : 'outline'} 
+                    <Button
+                      variant={displayMode === 'both' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setDisplayMode('both')}
                       className="text-xs px-2 py-1 h-8"
                     >
                       Both
                     </Button>
-                    <Button 
-                      variant={displayMode === 'lyrics' ? 'default' : 'outline'} 
+                    <Button
+                      variant={displayMode === 'lyrics' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setDisplayMode('lyrics')}
                       className="text-xs px-2 py-1 h-8"
                     >
                       Lyrics
                     </Button>
-                    <Button 
-                      variant={displayMode === 'chords' ? 'default' : 'outline'} 
+                    <Button
+                      variant={displayMode === 'chords' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setDisplayMode('chords')}
                       className="text-xs px-2 py-1 h-8"
@@ -550,7 +548,7 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
                     </Button>
                     
                   </div>
-                  
+
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={decreaseFont}
@@ -656,7 +654,7 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
                       )}
                     </div>
                   )}
-                  
+
                   {!viewingSong.lyrics && !viewingSong.chords && (
                     <p className="text-muted-foreground">No content available</p>
                   )}

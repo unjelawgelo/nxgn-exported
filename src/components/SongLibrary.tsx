@@ -371,10 +371,10 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
           resetForm()
         }
       }}>
-        <DialogContent className="w-[calc(100%-2rem)] h-[calc(100vh-2rem)] max-w-none mx-auto my-4 rounded-lg p-0 overflow-hidden flex flex-col">
-          <div className="p-3 border-b sticky top-0 bg-background z-10">
+        <DialogContent className="w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] h-[calc(100vh-2rem)] sm:h-[calc(100vh-3rem)] max-w-none mx-auto my-2 sm:my-4 rounded-lg p-0 overflow-hidden flex flex-col">
+          <div className="p-3 sm:p-4 border-b sticky top-0 bg-background z-10">
             <DialogHeader className="space-y-0">
-              <DialogTitle className="text-xl">
+              <DialogTitle className="text-lg sm:text-xl">
                 {editingSong ? 'Edit Song' : 'Add New Song'}
               </DialogTitle>
             </DialogHeader>
@@ -384,8 +384,8 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
             onSubmit={editingSong ? handleEditSong : handleAddSong} 
             className="flex-1 flex flex-col overflow-hidden"
           >
-            <div className="p-4 space-y-4 flex-1 overflow-y-auto">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="p-3 sm:p-4 space-y-4 flex-1 overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                 <div className="space-y-3 md:col-span-1">
                   <div>
                     <Label htmlFor="title">Title</Label>
@@ -426,8 +426,8 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
                           adjustTextareaHeight(e.target)
                         }}
                         placeholder="Enter song lyrics..."
-                        className="min-h-[300px] w-full p-4 text-base font-mono resize-none focus-visible:outline-none border-0 bg-transparent"
-                        style={{ minHeight: '300px' }}
+                        className="min-h-[200px] sm:min-h-[300px] w-full p-3 sm:p-4 text-sm sm:text-base font-mono resize-none focus-visible:outline-none border-0 bg-transparent"
+                        style={{ minHeight: '200px' }}
                         rows={1}
                       />
                     </div>
@@ -444,8 +444,8 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
                           adjustTextareaHeight(e.target)
                         }}
                         placeholder="Enter chord progressions..."
-                        className="min-h-[200px] w-full p-4 text-base font-mono resize-none focus-visible:outline-none border-0 bg-transparent"
-                        style={{ minHeight: '200px' }}
+                        className="min-h-[150px] sm:min-h-[200px] w-full p-3 sm:p-4 text-sm sm:text-base font-mono resize-none focus-visible:outline-none border-0 bg-transparent"
+                        style={{ minHeight: '150px' }}
                         rows={1}
                       />
                     </div>
@@ -454,7 +454,7 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
               </div>
             </div>
 
-            <div className="p-4 border-t flex flex-col sm:flex-row justify-end gap-3 bg-background/80 backdrop-blur-sm sticky bottom-0">
+            <div className="p-4 border-t flex flex-row justify-end gap-3 bg-background/80 backdrop-blur-sm sticky bottom-0">
               <Button
                 type="button"
                 variant="outline"
@@ -463,21 +463,21 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
                   setEditingSong(null)
                   resetForm()
                 }}
-                className="w-full sm:w-auto px-6 h-11"
+                className="flex-1 sm:flex-none sm:w-auto px-4 sm:px-6 h-11"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full sm:w-auto px-6 h-11"
+                className="flex-1 sm:flex-none sm:w-auto px-4 sm:px-6 h-11"
               >
                 {loading ? (
                   <span className="flex items-center justify-center">
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Saving...
                   </span>
-                ) : editingSong ? 'Update Song' : 'Add Song'}
+                ) : editingSong ? 'Update' : 'Add Song'}
               </Button>
             </div>
           </form>
@@ -486,7 +486,7 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
 
       {/* View Modal */}
       <Dialog open={!!viewingSong} onOpenChange={(open) => !open && setViewingSong(null)}>
-        <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+        <DialogContent className="w-[calc(100%-1rem)] sm:w-full max-w-2xl max-h-[90vh] overflow-y-auto p-0">
           {viewingSong && (
             <div className="p-6">
               <DialogHeader className="mb-4 text-left">

@@ -408,7 +408,7 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
             </div>
 
             {/* devAngelo footer */}
-            <div className="p-4 border-t flex flex-row justify-end gap-3 bg-background/80 backdrop-blur-sm sticky bottom-0">
+            <div className="p-4 pb-9 border-t flex flex-row justify-end gap-3 bg-background/80 backdrop-blur-sm sticky bottom-0">
               <Button
                 type="button"
                 variant="outline"

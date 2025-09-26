@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { blink } from '../blink/client'
 import { User } from '../App'
-import { Search, Filter, Plus, Music, Pencil, Trash, RefreshCw, Loader2 } from 'lucide-react'
+import { Search, Filter, Plus, Music, Pencil, Trash, RefreshCw, Loader2, X } from 'lucide-react'
 import { useNotifications } from '../hooks/useNotifications'
 import { useConfirm } from '../hooks/useConfirm'
 import { Button } from './ui/button'
@@ -50,6 +50,8 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
   const confirm = useConfirm()
   const [contentFontSize, setContentFontSize] = useState(15)
   const [displayMode, setDisplayMode] = useState<'both' | 'lyrics' | 'chords'>('both')
+  const [selectedKey, setSelectedKey] = useState<string>('C')
+  const [showChords, setShowChords] = useState<Record<string, boolean>>({})
   const [cardDisplayModes, setCardDisplayModes] = useState<Record<string, 'both' | 'lyrics' | 'chords'>>({})
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -70,6 +72,65 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
   const decreaseFont = () => setContentFontSize(s => Math.max(12, s - 2))
   const increaseFont = () => setContentFontSize(s => Math.min(36, s + 2))
   const resetFont = () => setContentFontSize(15)
+
+  // Toggle between showing chords or numbers for a song
+  const toggleShowChords = (songId: string) => {
+    setShowChords(prev => ({
+      ...prev,
+      [songId]: !(prev[songId] ?? true) // Default to true (show chords) if not set
+    }));
+  };
+
+  // Check if we should show chords or numbers for a song
+  const shouldShowChords = (songId: string) => {
+    return showChords[songId] ?? true; // Default to true (show chords) if not set
+  };
+
+  // Convert Nashville numbers to chords based on selected key
+  const convertNashvilleToChords = (text: string, key: string) => {
+    if (!text) return '';
+    
+    // Define the major scale notes in order
+    const majorScale = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    
+    // Find the index of the selected key
+    const keyIndex = majorScale.indexOf(key);
+    if (keyIndex === -1) return text; // If key not found, return original text
+    
+    // Define the Nashville number to chord quality mapping
+    const nashvilleChords = {
+      '1': '',    // Major
+      '2': 'm',   // Minor
+      '3': 'm',   // Minor
+      '4': '',    // Major
+      '5': '',    // Major (dominant)
+      '6': 'm',   // Minor
+      '7': 'dim'  // Diminished
+    };
+    
+    // Create a map of Nashville numbers to actual chords in the selected key
+    const chordMap: Record<string, string> = {};
+    
+    // Generate chords for each degree
+    Object.entries(nashvilleChords).forEach(([degree, quality]) => {
+      const degreeNum = parseInt(degree);
+      // Calculate the note index (0-based) - using the major scale formula
+      const noteIndex = (keyIndex + [0, 2, 4, 5, 7, 9, 11][degreeNum - 1]) % 12;
+      chordMap[degree] = majorScale[noteIndex] + quality;
+    });
+    
+    // Replace Nashville numbers with chords in the text
+    let result = text;
+    
+    // First replace all the numbers at word boundaries
+    Object.entries(chordMap).forEach(([number, chord]) => {
+      // Match the number at word boundaries to avoid partial matches
+      const regex = new RegExp(`\\b${number}\\b`, 'g');
+      result = result.replace(regex, chord);
+    });
+    
+    return result;
+  }
 
   const loadSongs = useCallback(async () => {
     if (!ministryId) return
@@ -435,8 +496,18 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
           {viewingSong && (
             <>
               <div className="p-4 border-b bg-background sticky top-0 z-10">
-                <DialogHeader>
-                  <DialogTitle className="text-xl">{viewingSong.title}</DialogTitle>
+                <DialogHeader className="relative">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-4 top-0 h-8 w-8 p-0"
+                    onClick={() => setViewingSong(null)}
+                  >
+                    <X className="h-4 w-4" />
+                    <span className="sr-only">Close</span>
+                  </Button>
+                  <DialogTitle className="text-xl pr-8">{viewingSong.title}</DialogTitle>
                   <div className="flex items-center gap-2 mt-2">
                     <span className={`px-2 py-1 rounded text-xs ${
                       viewingSong.category === 'Worship' 
@@ -477,33 +548,28 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
                     >
                       Chords
                     </Button>
+                    
                   </div>
                   
                   <div className="flex items-center gap-1.5">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
+                    <button
                       onClick={decreaseFont}
-                      className="text-xs px-2 py-1 h-8"
+                      className="h-8 w-8 flex items-center justify-center text-xs rounded-md border border-input bg-transparent hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-0 active:bg-transparent active:text-foreground"
                     >
                       A-
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
+                    </button>
+                    <button
                       onClick={resetFont}
-                      className="text-xs px-2 py-1 h-8"
+                      className="h-8 px-3 flex items-center justify-center text-xs rounded-md border border-input bg-transparent hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-0 active:bg-transparent active:text-foreground"
                     >
                       Reset
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
+                    </button>
+                    <button
                       onClick={increaseFont}
-                      className="text-xs px-2 py-1 h-8"
+                      className="h-8 w-8 flex items-center justify-center text-xs rounded-md border border-input bg-transparent hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-0 active:bg-transparent active:text-foreground"
                     >
                       A+
-                    </Button>
+                    </button>
                   </div>
                 </div>
 
@@ -516,10 +582,78 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
                     </div>
                   )}
                   
-                  {(displayMode === 'both' || displayMode === 'chords') && viewingSong.chords && (
+                  {(displayMode === 'both' || displayMode === 'chords') && (
                     <div>
-                      <h4 className="font-semibold mb-2">Chords</h4>
-                      <div>{viewingSong.chords}</div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-semibold">Chords in {selectedKey}</h4>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => toggleShowChords(viewingSong.id)}
+                            className={`h-8 px-3 py-1.5 text-xs rounded-md transition-colors ${
+                              shouldShowChords(viewingSong.id)
+                                ? 'bg-transparent border border-input hover:bg-accent hover:text-accent-foreground'
+                                : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                            }`}
+                          >
+                            {shouldShowChords(viewingSong.id) ? 'Show Numbers' : 'Show Chords'}
+                          </button>
+                          <div className="flex items-center gap-1">
+                            <span className="text-sm text-muted-foreground">Key:</span>
+                            <Select 
+                              value={selectedKey} 
+                              onValueChange={setSelectedKey}
+                            >
+                              <SelectTrigger className="h-8 w-[80px] text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].map(key => (
+                                  <SelectItem key={key} value={key} className="text-xs">
+                                    {key}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Chord Progression Reference */}
+                      <div className="mb-4 p-3 bg-muted/20 rounded-md">
+                        <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                          {['1', '2', '3', '4', '5', '6'].map((degree) => (
+                            <div key={degree} className="flex flex-col items-center p-1.5 bg-background rounded border text-center">
+                              <span className="text-xs text-muted-foreground">{degree}</span>
+                              <span className="font-mono text-sm font-medium">
+                                {convertNashvilleToChords(degree, selectedKey)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      {/* Converted Chords */}
+                      {viewingSong.chords && (
+                        <div className="mt-2">
+                          <div className="whitespace-pre-wrap font-mono bg-background p-3 rounded border">
+                            {shouldShowChords(viewingSong.id)
+                              ? convertNashvilleToChords(viewingSong.chords, selectedKey)
+                              : viewingSong.chords}
+                          </div>
+                          
+                          {/* Original Nashville Numbers (collapsible) - Only show when displaying chords */}
+                          {shouldShowChords(viewingSong.id) && (
+                            <details className="mt-3 text-sm">
+                              <summary className="text-muted-foreground cursor-pointer hover:text-foreground">
+                                Show original Nashville numbers
+                              </summary>
+                              <div className="mt-2 p-2 bg-muted/10 rounded font-mono whitespace-pre-wrap">
+                                {viewingSong.chords}
+                              </div>
+                            </details>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                   

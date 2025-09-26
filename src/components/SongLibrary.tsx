@@ -598,7 +598,7 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
                                 : 'bg-primary text-primary-foreground hover:bg-primary/90'
                             }`}
                           >
-                            {shouldShowChords(viewingSong.id) ? 'Show Numbers' : 'Show Chords'}
+                            {shouldShowChords(viewingSong.id) ? 'Close' : 'Show Chords'}
                           </button>
                           <div className="flex items-center gap-1">
                             <span className="text-sm text-muted-foreground">Key:</span>

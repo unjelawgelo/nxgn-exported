@@ -174,11 +174,10 @@ export function ProfileDropdown({
       {isOpen && (
         <div
           className={cn(
-            'fixed right-4 mt-2 w-60 rounded-md z-50 bg-card text-card-foreground shadow-[0_4px_12px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.3)]',
+            'absolute right-0 mt-2 w-60 rounded-md z-50 bg-card text-card-foreground shadow-[0_4px_12px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.3)]',
             isOpen ? 'block' : 'hidden',
             className
           )}
-          style={{ top: 'calc(100% + 0.5rem)' }}
         >
           <div className="p-4">
             <div className="flex items-center gap-3">

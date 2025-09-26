@@ -5,6 +5,17 @@ import { LogOut, User as UserIcon, Settings as SettingsIcon, Check, ChevronDown 
 import { cn } from '../../lib/utils';
 import { useConfirm } from '../../hooks/useConfirm';
 
+/**
+ * Profile Dropdown Component
+ * 
+ * Features:
+ * - Mobile-responsive avatar and dropdown
+ * - Smooth animations and transitions
+ * - Proper touch targets for mobile devices
+ * - Handles outside clicks and keyboard navigation
+ * - Displays user information and actions
+ */
+
 interface Ministry {
   id: string;
   name: string;

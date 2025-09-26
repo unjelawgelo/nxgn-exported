@@ -3,6 +3,8 @@ import { blink } from '../blink/client'
 import { User } from '../App'
 import { playlistDb } from '../lib/dbUtils'
 import { ListMusic, Plus, Music, Pencil, Trash, Search, RefreshCw, Loader2, MoreHorizontal } from 'lucide-react'
+import { Button } from './ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,6 +60,8 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
   const [searchQuery, setSearchQuery] = useState('')
   const [contentFontSize, setContentFontSize] = useState(15)
   const [displayMode, setDisplayMode] = useState<'both' | 'lyrics' | 'chords'>('both')
+  const [songKeys, setSongKeys] = useState<Record<string, string>>({})
+  const [showChords, setShowChords] = useState<Record<string, boolean>>({})
   // UI states for async actions
   const [addingSongs, setAddingSongs] = useState(false)
   const [resetting, setResetting] = useState(false)
@@ -66,6 +70,78 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
   const decreaseFont = () => setContentFontSize(s => Math.max(12, s - 2))
   const increaseFont = () => setContentFontSize(s => Math.min(36, s + 2))
   const resetFont = () => setContentFontSize(15)
+
+  // Get or set the key for a specific song
+  const getSongKey = (songId: string) => {
+    return songKeys[songId] || 'C';
+  };
+
+  // Update the key for a specific song
+  const setSongKey = (songId: string, key: string) => {
+    setSongKeys(prev => ({
+      ...prev,
+      [songId]: key
+    }));
+  };
+
+  // Toggle between showing chords or numbers for a song
+  const toggleShowChords = (songId: string) => {
+    setShowChords(prev => ({
+      ...prev,
+      [songId]: !(prev[songId] ?? true) // Default to true (show chords) if not set
+    }));
+  };
+
+  // Check if we should show chords or numbers for a song
+  const shouldShowChords = (songId: string) => {
+    return showChords[songId] ?? true; // Default to true (show chords) if not set
+  };
+
+  // Convert Nashville numbers to chords based on selected key
+  const convertNashvilleToChords = (text: string, key: string) => {
+    if (!text) return '';
+    
+    // Define the major scale notes in order
+    const majorScale = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    
+    // Find the index of the selected key
+    const keyIndex = majorScale.indexOf(key);
+    if (keyIndex === -1) return text; // If key not found, return original text
+    
+    // Define the Nashville number to chord quality mapping
+    const nashvilleChords = {
+      '1': '',    // Major
+      '2': 'm',   // Minor
+      '3': 'm',   // Minor
+      '4': '',    // Major
+      '5': '',    // Major (dominant)
+      '6': 'm',   // Minor
+      '7': 'dim'  // Diminished
+    };
+    
+    // Create a map of Nashville numbers to actual chords in the selected key
+    const chordMap: Record<string, string> = {};
+    
+    // Generate chords for each degree
+    Object.entries(nashvilleChords).forEach(([degree, quality]) => {
+      const degreeNum = parseInt(degree);
+      // Calculate the note index (0-based) - using the major scale formula
+      const noteIndex = (keyIndex + [0, 2, 4, 5, 7, 9, 11][degreeNum - 1]) % 12;
+      chordMap[degree] = majorScale[noteIndex] + quality;
+    });
+    
+    // Replace Nashville numbers with chords in the text
+    let result = text;
+    
+    // First replace all the numbers at word boundaries
+    Object.entries(chordMap).forEach(([number, chord]) => {
+      // Match the number at word boundaries to avoid partial matches
+      const regex = new RegExp(`\\b${number}\\b`, 'g');
+      result = result.replace(regex, chord);
+    });
+    
+    return result;
+  }
 
   // Form state
   const [name, setName] = useState('')
@@ -755,15 +831,61 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
                       
                       {(displayMode === 'both' || displayMode === 'chords') && playlistSong.song?.chords && (
                         <div className="mb-6">
-                          <h4 className="font-medium text-foreground mb-3 flex items-center gap-2">
-                            <Music className="h-4 w-4" />
-                            Chords
-                          </h4>
-                          <div className="bg-card border border-border rounded-lg p-4 shadow-sm">
-                            <div className="text-foreground whitespace-pre-wrap font-mono leading-relaxed" style={{ fontSize: `${contentFontSize}px` }}>
-                              {playlistSong.song.chords}
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-medium text-foreground flex items-center gap-2">
+                              <Music className="h-4 w-4" />
+                              <span>Chords</span>
+                            </h4>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => toggleShowChords(playlistSong.song.id)}
+                                className={`h-8 px-3 py-1.5 text-xs rounded-md transition-colors ${
+                                  shouldShowChords(playlistSong.song.id)
+                                    ? 'bg-transparent border border-input hover:bg-accent hover:text-accent-foreground'
+                                    : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                                }`}
+                              >
+                                {shouldShowChords(playlistSong.song.id) ? 'Show Numbers' : 'Show Chords'}
+                              </button>
+                              {shouldShowChords(playlistSong.song.id) && (
+                                <div className="flex items-center gap-1">
+                                  <span className="text-sm text-muted-foreground">Key:</span>
+                                  <Select 
+                                    value={getSongKey(playlistSong.song.id)} 
+                                    onValueChange={(key) => setSongKey(playlistSong.song.id, key)}
+                                  >
+                                    <SelectTrigger className="h-8 w-[80px] text-xs">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].map(key => (
+                                        <SelectItem key={key} value={key} className="text-xs">
+                                          {key}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
                             </div>
                           </div>
+                          <div className="whitespace-pre-wrap font-mono text-sm bg-muted/10 p-4 rounded-md">
+                            {shouldShowChords(playlistSong.song.id)
+                              ? convertNashvilleToChords(playlistSong.song.chords, getSongKey(playlistSong.song.id))
+                              : playlistSong.song.chords}
+                          </div>
+                          
+                          {/* Original Nashville Numbers (collapsible) - Only show when displaying chords */}
+                          {shouldShowChords(playlistSong.song.id) && (
+                            <details className="mt-3 text-sm">
+                              <summary className="text-muted-foreground cursor-pointer hover:text-foreground text-xs">
+                                Show original Nashville numbers
+                              </summary>
+                              <div className="mt-2 p-2 bg-muted/5 rounded font-mono whitespace-pre-wrap text-sm">
+                                {playlistSong.song.chords}
+                              </div>
+                            </details>
+                          )}
                         </div>
                       )}
                       

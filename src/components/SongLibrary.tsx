@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { blink } from '../blink/client'
 import { User } from '../App'
+
 import { Search, Filter, Plus, Music, Pencil, Trash, RefreshCw, Loader2, X } from 'lucide-react'
+
 import { useNotifications } from '../hooks/useNotifications'
 import { useConfirm } from '../hooks/useConfirm'
 import { Button } from './ui/button'
@@ -551,10 +553,11 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
 
                   <div className="flex items-center gap-1.5">
                     <button
+
                       onClick={decreaseFont}
                       className="h-8 w-8 flex items-center justify-center text-xs rounded-md border border-input bg-transparent hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-0 active:bg-transparent active:text-foreground"
                     >
-                      A-
+
                     </button>
                     <button
                       onClick={resetFont}
@@ -579,8 +582,10 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
                       <div>{viewingSong.lyrics}</div>
                     </div>
                   )}
+
                   
                   {(displayMode === 'both' || displayMode === 'chords') && (
+
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="font-semibold">Chords in {selectedKey}</h4>

@@ -845,6 +845,7 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
                                     : 'bg-primary text-primary-foreground hover:bg-primary/90'
                                 }`}
                               >
+
                                 {shouldShowChords(playlistSong.song.id) ? 'Close' : 'Show Chords'}
                               </button>
                               {shouldShowChords(playlistSong.song.id) && (

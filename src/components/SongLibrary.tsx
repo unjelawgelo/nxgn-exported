@@ -454,7 +454,7 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
               </div>
             </div>
 
-            <div className="p-4 border-t flex justify-end gap-3 bg-background/80 backdrop-blur-sm sticky bottom-0">
+            <div className="p-4 border-t flex flex-col sm:flex-row justify-end gap-3 bg-background/80 backdrop-blur-sm sticky bottom-0">
               <Button
                 type="button"
                 variant="outline"
@@ -463,20 +463,20 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
                   setEditingSong(null)
                   resetForm()
                 }}
-                className="px-6 h-11"
+                className="w-full sm:w-auto px-6 h-11"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={loading}
-                className="px-6 h-11"
+                className="w-full sm:w-auto px-6 h-11"
               >
                 {loading ? (
-                  <>
+                  <span className="flex items-center justify-center">
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Saving...
-                  </>
+                  </span>
                 ) : editingSong ? 'Update Song' : 'Add Song'}
               </Button>
             </div>

@@ -16,6 +16,8 @@ interface ResponsiveHeaderProps {
   showMinistrySelector?: boolean;
   className?: string;
   children?: React.ReactNode;
+  isMobileMenuOpen?: boolean;
+  onMobileMenuToggle?: (isOpen: boolean) => void;
 }
 
 export function ResponsiveHeader({
@@ -27,6 +29,8 @@ export function ResponsiveHeader({
   showMinistrySelector = false,
   className = '',
   children,
+  isMobileMenuOpen = false,
+  onMobileMenuToggle,
 }: ResponsiveHeaderProps) {
   // Get the current ministry name
   const currentMinistry = selectedMinistryId && ministries.length > 0 
@@ -35,14 +39,40 @@ export function ResponsiveHeader({
 
   return (
     <div className={cn(
-      'sticky top-0 z-30 bg-card/80 backdrop-blur-sm border-b border-border p-4',
+      'sticky top-0 z-30 bg-card/80 backdrop-blur-sm border-b border-border p-4 w-full',
       className
     )}>
-      <div className="flex items-center justify-between w-full">
-        <div className="flex flex-col">
-          <h1 className="text-2xl font-bold text-foreground tracking-tight font-sans">
-            NXGN
-          </h1>
+      <div className="flex items-center justify-between w-full relative">
+        <div className="flex items-center space-x-4">
+          <button 
+            className="md:hidden p-2 -ml-2 rounded-md text-foreground hover:bg-accent focus:outline-none focus:ring-2 focus:ring-primary"
+            onClick={() => onMobileMenuToggle?.(!isMobileMenuOpen)}
+            aria-label="Toggle menu"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={cn(
+                'h-5 w-5 transform transition-transform duration-200',
+                isMobileMenuOpen ? 'rotate-90' : ''
+              )}
+            >
+              <line x1="4" x2="20" y1="12" y2="12" />
+              <line x1="4" x2="20" y1="6" y2="6" />
+              <line x1="4" x2="20" y1="18" y2="18" />
+            </svg>
+          </button>
+          <div className="flex flex-col">
+            <h1 className="text-2xl font-bold text-foreground tracking-tight font-sans">
+              NXGN
+            </h1>
           {showMinistrySelector && selectedMinistryId && (
             <div className="relative">
               <select

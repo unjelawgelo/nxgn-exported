@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { blink } from '../blink/client'
 import { User } from '../App'
-import { Search, Filter, Plus, Music, Pencil, FileEdit, Trash2, Trash, RefreshCw, Loader2 } from 'lucide-react'
+import { Search, Filter, Plus, Music, Pencil, Trash, RefreshCw, Loader2 } from 'lucide-react'
 import { useNotifications } from '../hooks/useNotifications'
 import { useConfirm } from '../hooks/useConfirm'
 import { Button } from './ui/button'
@@ -9,7 +9,6 @@ import { Input } from './ui/input'
 import { Card, CardContent } from './ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
-import { Textarea } from './ui/textarea'
 import { Label } from './ui/label'
 
 import { PageSkeleton, ListSkeleton } from '../components/ui/loading-skeleton'
@@ -110,8 +109,6 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
     setFilteredSongs(filtered)
   }, [songs, searchQuery, categoryFilter])
 
-
-
   const handleAddSong = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!title || !ministryId) return
@@ -127,10 +124,7 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
         createdBy: user.id
       }
 
-      // Persist to DB and use the returned record to keep local state authoritative
       const saved = await blink.db.songs.create(payload as any)
-
-      // Use the saved record returned from the DB (it should include id and timestamps)
       setSongs(prev => [...prev, saved as Song])
       setShowAddModal(false)
       resetForm()
@@ -149,14 +143,7 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
 
     setLoading(true)
     try {
-      const updatedFields = {
-        title,
-        lyrics,
-        chords,
-        category
-      }
-
-      // Persist updates and use returned record
+      const updatedFields = { title, lyrics, chords, category }
       const saved = await blink.db.songs.update(editingSong.id, updatedFields as any)
 
       setSongs(prev => prev.map(song => 
@@ -208,7 +195,6 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
     setChords(song.chords || '')
     setCategory(song.category as 'Worship' | 'Praise')
     
-    // Force a re-render to ensure text areas are properly sized
     setTimeout(() => {
       const lyricsTextarea = document.getElementById('lyrics') as HTMLTextAreaElement
       const chordsTextarea = document.getElementById('chords') as HTMLTextAreaElement
@@ -237,7 +223,7 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
 
   return (
     <div className="h-full flex flex-col p-4">
-      {/* Header with search, filter, and add button */}
+      {/* Header */}
       <div className="flex flex-col space-y-3 mb-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold text-foreground">Song Library</h2>
@@ -300,16 +286,12 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
                 className="song-card bg-card border border-border rounded-lg p-4 hover:bg-muted/50 transition-colors cursor-pointer relative overflow-hidden mx-2 my-2"
                 onClick={() => { setViewingSong(song); setDisplayMode(cardDisplayModes[song.id] || 'both') }}
               >
-                {/* Edit/Delete buttons - top right inside card */}
                 {canEdit && (
                   <div className="absolute top-2 right-2 flex items-center gap-0.5 z-10 bg-background/80 backdrop-blur-sm rounded-md p-1" onClick={(e) => e.stopPropagation()}>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openEditModal(song);
-                      }}
+                      onClick={(e) => { e.stopPropagation(); openEditModal(song) }}
                       className="p-1.5 h-auto w-auto text-muted-foreground hover:text-foreground hover:bg-muted rounded"
                       aria-label={`Edit ${song.title}`}
                     >
@@ -318,10 +300,7 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteSong(song.id);
-                      }}
+                      onClick={(e) => { e.stopPropagation(); handleDeleteSong(song.id) }}
                       className="p-1.5 h-auto w-auto text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded"
                       aria-label={`Delete ${song.title}`}
                     >
@@ -332,9 +311,7 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
 
                 <div className="flex flex-col sm:flex-row items-start justify-between">
                   <div className="flex-1 min-w-0 pr-6 relative group">
-                    <h3 className="font-medium text-foreground mb-1 truncate transition-all duration-200 group-has-[.edit-buttons:hover]:text-sm">
-                      {song.title}
-                    </h3>
+                    <h3 className="font-medium text-foreground mb-1 truncate transition-all">{song.title}</h3>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                       <span className={`px-2 py-1 rounded text-xs ${
                         song.category === 'Worship' 
@@ -344,7 +321,6 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
                         {song.category}
                       </span>
                     </div>
-
                     {(() => {
                       const text = song.lyrics || song.chords || ''
                       if (!text) return null
@@ -363,13 +339,9 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
         )}
       </div>
 
-      {/* Add/Edit Modal - Full Screen */}
+      {/* Add/Edit Modal */}
       <Dialog open={showAddModal || !!editingSong} onOpenChange={(open) => {
-        if (!open) {
-          setShowAddModal(false)
-          setEditingSong(null)
-          resetForm()
-        }
+        if (!open) { setShowAddModal(false); setEditingSong(null); resetForm() }
       }}>
         <DialogContent className="w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] h-[calc(100vh-2rem)] sm:h-[calc(100vh-3rem)] max-w-none mx-auto my-2 sm:my-4 rounded-lg p-0 overflow-hidden flex flex-col">
           <div className="p-3 sm:p-4 border-b sticky top-0 bg-background z-10">
@@ -380,31 +352,18 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
             </DialogHeader>
           </div>
           
-          <form 
-            onSubmit={editingSong ? handleEditSong : handleAddSong} 
-            className="flex-1 flex flex-col overflow-hidden"
-          >
+          <form onSubmit={editingSong ? handleEditSong : handleAddSong} className="flex-1 flex flex-col overflow-hidden">
             <div className="p-3 sm:p-4 space-y-4 flex-1 overflow-y-auto">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                 <div className="space-y-3 md:col-span-1">
                   <div>
                     <Label htmlFor="title">Title</Label>
-                    <Input
-                      id="title"
-                      type="text"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      className="text-base py-2 h-auto"
-                      required
-                    />
+                    <Input id="title" type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="text-base py-2 h-auto" required />
                   </div>
-
                   <div>
                     <Label htmlFor="category">Category</Label>
                     <Select value={category} onValueChange={(value) => setCategory(value as 'Worship' | 'Praise')}>
-                      <SelectTrigger className="h-11 text-base">
-                        <SelectValue />
-                      </SelectTrigger>
+                      <SelectTrigger className="h-11 text-base"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Worship" className="text-base">Worship</SelectItem>
                         <SelectItem value="Praise" className="text-base">Praise</SelectItem>
@@ -421,10 +380,7 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
                         ref={textareaRef}
                         id="lyrics"
                         value={lyrics}
-                        onChange={(e) => {
-                          setLyrics(e.target.value)
-                          adjustTextareaHeight(e.target)
-                        }}
+                        onChange={(e) => { setLyrics(e.target.value); adjustTextareaHeight(e.target) }}
                         placeholder="Enter song lyrics..."
                         className="min-h-[200px] sm:min-h-[300px] w-full p-3 sm:p-4 text-sm sm:text-base font-mono resize-none focus-visible:outline-none border-0 bg-transparent"
                         style={{ minHeight: '200px' }}
@@ -439,10 +395,7 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
                       <textarea
                         id="chords"
                         value={chords}
-                        onChange={(e) => {
-                          setChords(e.target.value)
-                          adjustTextareaHeight(e.target)
-                        }}
+                        onChange={(e) => { setChords(e.target.value); adjustTextareaHeight(e.target) }}
                         placeholder="Enter chord progressions..."
                         className="min-h-[150px] sm:min-h-[200px] w-full p-3 sm:p-4 text-sm sm:text-base font-mono resize-none focus-visible:outline-none border-0 bg-transparent"
                         style={{ minHeight: '150px' }}
@@ -454,28 +407,20 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
               </div>
             </div>
 
+            {/* devAngelo footer */}
             <div className="p-4 border-t flex flex-row justify-end gap-3 bg-background/80 backdrop-blur-sm sticky bottom-0">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => {
-                  setShowAddModal(false)
-                  setEditingSong(null)
-                  resetForm()
-                }}
+                onClick={() => { setShowAddModal(false); setEditingSong(null); resetForm() }}
                 className="flex-1 sm:flex-none sm:w-auto px-4 sm:px-6 h-11"
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                disabled={loading}
-                className="flex-1 sm:flex-none sm:w-auto px-4 sm:px-6 h-11"
-              >
+              <Button type="submit" disabled={loading} className="flex-1 sm:flex-none sm:w-auto px-4 sm:px-6 h-11">
                 {loading ? (
                   <span className="flex items-center justify-center">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
                   </span>
                 ) : editingSong ? 'Update' : 'Add Song'}
               </Button>
@@ -486,113 +431,104 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
 
       {/* View Modal */}
       <Dialog open={!!viewingSong} onOpenChange={(open) => !open && setViewingSong(null)}>
-        <DialogContent className="w-[calc(100%-1rem)] sm:w-full max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+        <DialogContent className="w-[calc(100%-1rem)] sm:w-full max-w-2xl max-h-[90vh] overflow-y-auto p-0 flex flex-col rounded-lg">
           {viewingSong && (
-            <div className="p-6">
-              <DialogHeader className="mb-4 text-left">
-                <DialogTitle className="text-2xl">
-                  {viewingSong.title}
-                </DialogTitle>
-              </DialogHeader>
-              
-              <div className="flex items-center gap-3 mb-4">
-                <span className={`px-3 py-1 rounded text-sm ${
-                  viewingSong.category === 'Worship' 
-                    ? 'bg-blue-500/20 text-blue-400' 
-                    : 'bg-orange-500/20 text-orange-400'
-                }`}>
-                  {viewingSong.category}
-                </span>
-                
-                <div className="flex-1 flex justify-end">
-                  <div className="flex items-center gap-2">
-                    {(['both','chords','lyrics'] as const).map((m) => (
-                      <Button
-                        key={m}
-                        variant={displayMode === m ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setDisplayMode(m)}
-                        className="text-sm"
-                      >
-                        {m === 'both' ? 'Both' : m === 'lyrics' ? 'Lyrics' : 'Chords'}
-                      </Button>
-                    ))}
+            <>
+              <div className="p-4 border-b bg-background sticky top-0 z-10">
+                <DialogHeader>
+                  <DialogTitle className="text-xl">{viewingSong.title}</DialogTitle>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className={`px-2 py-1 rounded text-xs ${
+                      viewingSong.category === 'Worship' 
+                        ? 'bg-blue-500/20 text-blue-400' 
+                        : 'bg-orange-500/20 text-orange-400'
+                    }`}>
+                      {viewingSong.category}
+                    </span>
                   </div>
+                </DialogHeader>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                {/* View Controls */}
+                <div className="flex justify-between items-center flex-wrap gap-2 sticky top-0 bg-background/95 backdrop-blur-sm py-2 z-10">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <Button 
+                      variant={displayMode === 'both' ? 'default' : 'outline'} 
+                      size="sm"
+                      onClick={() => setDisplayMode('both')}
+                      className="text-xs px-2 py-1 h-8"
+                    >
+                      Both
+                    </Button>
+                    <Button 
+                      variant={displayMode === 'lyrics' ? 'default' : 'outline'} 
+                      size="sm"
+                      onClick={() => setDisplayMode('lyrics')}
+                      className="text-xs px-2 py-1 h-8"
+                    >
+                      Lyrics
+                    </Button>
+                    <Button 
+                      variant={displayMode === 'chords' ? 'default' : 'outline'} 
+                      size="sm"
+                      onClick={() => setDisplayMode('chords')}
+                      className="text-xs px-2 py-1 h-8"
+                    >
+                      Chords
+                    </Button>
+                  </div>
+                  
+                  <div className="flex items-center gap-1.5">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={decreaseFont}
+                      className="text-xs px-2 py-1 h-8"
+                    >
+                      A-
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={resetFont}
+                      className="text-xs px-2 py-1 h-8"
+                    >
+                      Reset
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={increaseFont}
+                      className="text-xs px-2 py-1 h-8"
+                    >
+                      A+
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="whitespace-pre-wrap font-mono" style={{ fontSize: `${contentFontSize}px` }}>
+                  {(displayMode === 'both' || displayMode === 'lyrics') && viewingSong.lyrics && (
+                    <div className="mb-6">
+                      <h4 className="font-semibold mb-2">Lyrics</h4>
+                      <div>{viewingSong.lyrics}</div>
+                    </div>
+                  )}
+                  
+                  {(displayMode === 'both' || displayMode === 'chords') && viewingSong.chords && (
+                    <div>
+                      <h4 className="font-semibold mb-2">Chords</h4>
+                      <div>{viewingSong.chords}</div>
+                    </div>
+                  )}
+                  
+                  {!viewingSong.lyrics && !viewingSong.chords && (
+                    <p className="text-muted-foreground">No content available</p>
+                  )}
                 </div>
               </div>
-
-              {(displayMode === 'both' || displayMode === 'lyrics') && viewingSong.lyrics && (
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-foreground">Lyrics</h4>
-                    <div className="flex items-center gap-1">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={decreaseFont} 
-                        className="px-2 py-1 h-auto hover:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0"
-                      >A-</Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={increaseFont} 
-                        className="px-2 py-1 h-auto hover:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0"
-                      >A+</Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={resetFont} 
-                        className="px-2 py-1 h-auto hover:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0"
-                      >
-                        <RefreshCw className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  <Card>
-                    <CardContent className="p-4">
-                      <pre className="text-foreground whitespace-pre-wrap" style={{ fontSize: `${contentFontSize}px` }}>{viewingSong.lyrics}</pre>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-
-              {(displayMode === 'both' || displayMode === 'chords') && viewingSong.chords && (
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-foreground">Chords</h4>
-                    {displayMode === 'chords' && (
-                      <div className="flex items-center gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={decreaseFont} 
-                          className="px-2 py-1 h-auto hover:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0"
-                        >A-</Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={increaseFont} 
-                          className="px-2 py-1 h-auto hover:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0"
-                        >A+</Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={resetFont} 
-                          className="px-2 py-1 h-auto hover:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0"
-                        >
-                          <RefreshCw className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                  <Card>
-                    <CardContent className="p-4">
-                      <pre className="text-foreground whitespace-pre-wrap font-mono" style={{ fontSize: `${contentFontSize}px` }}>{viewingSong.chords}</pre>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-            </div>
+            </>
           )}
         </DialogContent>
       </Dialog>

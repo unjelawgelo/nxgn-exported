@@ -233,12 +233,26 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
 
       await blink.db.playlists.create(newPlaylist)
       
-      setPlaylists([...playlists, newPlaylist as Playlist])
+      // Instead of just adding the new playlist locally, refetch the full list
+      // to ensure we have the latest data from the server
+      const updatedPlaylists = await blink.db.playlists.list({
+        where: { ministryId },
+        orderBy: { name: 'asc' }
+      })
+      
+      setPlaylists(updatedPlaylists as Playlist[])
       setShowAddModal(false)
       resetForm()
       notifications.showSuccess('Setlist created', 'Your setlist was saved')
+      
+      // Select the newly created playlist
+      const createdPlaylist = updatedPlaylists.find(p => p.name === name)
+      if (createdPlaylist) {
+        setSelectedPlaylist(createdPlaylist as Playlist)
+        loadPlaylistSongs(createdPlaylist.id)
+      }
     } catch (err) {
-      console.error('Failed to add playlist')
+      console.error('Failed to add playlist:', err)
       notifications.showError('Add failed', 'Unable to create playlist')
     } finally {
       setLoading(false)

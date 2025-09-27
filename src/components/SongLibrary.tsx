@@ -553,11 +553,10 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
 
                   <div className="flex items-center gap-1.5">
                     <button
-
                       onClick={decreaseFont}
                       className="h-8 w-8 flex items-center justify-center text-xs rounded-md border border-input bg-transparent hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-0 active:bg-transparent active:text-foreground"
                     >
-
+                      A-
                     </button>
                     <button
                       onClick={resetFont}

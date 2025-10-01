@@ -17,16 +17,13 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 // Allowed origins configuration
 const allowedOrigins = [
-  // Production frontend URL - replace with your actual production URL
-  /^https?:\/\/nxgn-jrevfam\.vercel\.app$/,  // Your Vercel frontend
+  // Production frontend URL
+  'https://nxgn-jrevfam.vercel.app',  // Your Vercel frontend
   
   // Development URLs
   'http://localhost:5173',  // Local frontend development
   'http://localhost:4000'   // Local API development
 ];
-
-// If you have a custom domain for production, add it here
-// Example: 'https://yourdomain.com'
 
 const corsOptions = {
   origin: function (origin, callback) {

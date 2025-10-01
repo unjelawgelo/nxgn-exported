@@ -607,6 +607,7 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
 
                   <div className="flex items-center gap-1.5">
                     <button
+
                       onClick={(e) => { e.preventDefault(); decreaseFont() }}
                       onMouseDown={e => { e.preventDefault(); e.stopPropagation() }}
                       onFocus={e => e.target.blur()}
@@ -647,6 +648,7 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
 
                     <div style={{ fontSize: '0.875rem' }}>
                       <div className="flex items-center justify-between mb-3">
+
                         <h4 className="font-semibold text-base">
                           {shouldShowChords(viewingSong.id) ? `Chords in ${selectedKey}` : 'Chords'}
                         </h4>

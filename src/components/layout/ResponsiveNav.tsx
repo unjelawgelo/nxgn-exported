@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { cn } from '../../lib/utils';
-import { Home, Music, ListMusic, Users, Settings, Calendar } from 'lucide-react';
+import { Home, Music, ListMusic, Users, Settings, Calendar, BookOpen } from 'lucide-react';
 
 interface NavItem {
   name: string;
@@ -14,6 +14,7 @@ const navItems: NavItem[] = [
   { name: 'Songs', icon: Music, value: 'songs' },
   { name: 'Line-ups', icon: ListMusic, value: 'playlists' },
   { name: 'Availability', icon: Calendar, value: 'availability' },
+  { name: 'Learn', icon: BookOpen, value: 'learn' },
   { name: 'Ministries', icon: Users, value: 'ministries', adminOnly: true },
   { name: 'Users', icon: Users, value: 'users', adminOnly: true },
   { name: 'Settings', icon: Settings, value: 'settings' },

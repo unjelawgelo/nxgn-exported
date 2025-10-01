@@ -13,8 +13,43 @@ import availabilityRouter from './routes/availability.js';
 const app = express();
 
 // Configure CORS with specific origin and credentials support
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Allowed origins configuration
+const allowedOrigins = [
+  // Production frontend URL - replace with your actual production URL
+  /^https?:\/\/nxgn-jrevfam\.vercel\.app$/,  // Your Vercel frontend
+  
+  // Development URLs
+  'http://localhost:5173',  // Local frontend development
+  'http://localhost:4000'   // Local API development
+];
+
+// If you have a custom domain for production, add it here
+// Example: 'https://yourdomain.com'
+
 const corsOptions = {
-  origin: 'http://localhost:5173', // Your frontend URL
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Check if the origin matches any of the allowed patterns
+    const isAllowed = allowedOrigins.some(pattern => {
+      if (typeof pattern === 'string') {
+        return origin === pattern;
+      } else if (pattern instanceof RegExp) {
+        return pattern.test(origin);
+      }
+      return false;
+    });
+
+    if (isAllowed) {
+      return callback(null, true);
+    } else {
+      console.warn(`Blocked request from origin: ${origin}`);
+      return callback(new Error(`Not allowed by CORS: ${origin}`), false);
+    }
+  },
   credentials: true, // Allow credentials (cookies, authorization headers, etc.)
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
@@ -39,10 +74,25 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
 // Add headers before the routes are defined
-app.use(function (req, res, next) {
-  // Allow requests from the frontend
-  res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
-  res.header('Access-Control-Allow-Credentials', true);
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  
+  // Check if the request origin matches any of the allowed patterns
+  const isAllowed = allowedOrigins.some(pattern => {
+    if (typeof pattern === 'string') {
+      return origin === pattern;
+    } else if (pattern instanceof RegExp) {
+      return pattern.test(origin);
+    }
+    return false;
+  });
+
+  if (isAllowed) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Vary', 'Origin'); // Important for caching
+  }
+  
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   

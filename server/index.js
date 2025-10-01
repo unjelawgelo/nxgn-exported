@@ -13,8 +13,23 @@ import availabilityRouter from './routes/availability.js';
 const app = express();
 
 // Configure CORS with specific origin and credentials support
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://nxgn-jrevfam.vercel.app',
+  'https://nxgn-api.onrender.com'
+];
+
 const corsOptions = {
-  origin: 'http://localhost:5173', // Your frontend URL
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
   credentials: true, // Allow credentials (cookies, authorization headers, etc.)
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
@@ -39,10 +54,15 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
 // Add headers before the routes are defined
-app.use(function (req, res, next) {
-  // Allow requests from the frontend
-  res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
-  res.header('Access-Control-Allow-Credentials', true);
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  
+  // Check if the request origin is in the allowed origins
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  
+  res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   

@@ -88,13 +88,13 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
   const toggleShowChords = (songId: string) => {
     setShowChords(prev => ({
       ...prev,
-      [songId]: !(prev[songId] ?? true) // Default to true (show chords) if not set
+      [songId]: !(prev[songId] ?? false) // Default to false (show Nashville) if not set
     }));
   };
 
   // Check if we should show chords or numbers for a song
   const shouldShowChords = (songId: string) => {
-    return showChords[songId] ?? true; // Default to true (show chords) if not set
+    return showChords[songId] ?? false; // Default to false (show Nashville) if not set
   };
 
   // Convert Nashville numbers to chords based on selected key
@@ -782,30 +782,36 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
                         </div>
                         
                         <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-1 bg-card p-1 rounded">
+                          <div className="flex items-center gap-1">
                             <button 
                               type="button" 
-                              onClick={decreaseFont} 
-                              className="px-2 py-1 text-sm bg-muted rounded hover:bg-muted/80 transition-colors"
+                              onClick={decreaseFont}
+                              onMouseDown={e => e.preventDefault()}
+                              onFocus={e => e.target.blur()}
+                              className="px-2 py-1 text-sm bg-transparent text-muted-foreground rounded focus:outline-none focus:ring-0 focus:ring-offset-0 focus:ring-offset-transparent focus:ring-transparent focus:shadow-none select-none active:bg-transparent"
                               aria-label="Decrease font size"
                             >
                               A-
                             </button>
                             <button 
                               type="button" 
-                              onClick={increaseFont} 
-                              className="px-2 py-1 text-sm bg-muted rounded hover:bg-muted/80 transition-colors"
-                              aria-label="Increase font size"
+                              onClick={resetFont}
+                              onMouseDown={e => e.preventDefault()}
+                              onFocus={e => e.target.blur()}
+                              className="px-2 py-1 text-sm bg-transparent text-muted-foreground rounded focus:outline-none focus:ring-0 focus:ring-offset-0 focus:ring-offset-transparent focus:ring-transparent focus:shadow-none select-none active:bg-transparent"
+                              aria-label="Reset font size"
                             >
-                              A+
+                              Reset
                             </button>
                             <button 
                               type="button" 
-                              onClick={resetFont} 
-                              className="p-1.5 text-muted-foreground hover:text-foreground rounded hover:bg-muted/80 transition-colors"
-                              aria-label="Reset font size"
+                              onClick={increaseFont}
+                              onMouseDown={e => e.preventDefault()}
+                              onFocus={e => e.target.blur()}
+                              className="px-2 py-1 text-sm bg-transparent text-muted-foreground rounded focus:outline-none focus:ring-0 focus:ring-offset-0 focus:ring-offset-transparent focus:ring-transparent focus:shadow-none select-none active:bg-transparent"
+                              aria-label="Increase font size"
                             >
-                              <RefreshCw className="h-4 w-4" />
+                              A+
                             </button>
                           </div>
 
@@ -844,47 +850,61 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
                       )}
                       
                       {(displayMode === 'both' || displayMode === 'chords') && playlistSong.song?.chords && (
-                        <div className="mb-6">
-                          <div className="flex items-center justify-between mb-3">
-                            <h4 className="font-medium text-foreground flex items-center gap-2">
-                              <Music className="h-4 w-4" />
-                              <span>Chords</span>
-                            </h4>
-                            <div className="flex items-center gap-2">
+                        <div className="mb-6" style={{ fontSize: '0.875rem' }}>
+                          <div className="mb-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-medium text-foreground flex items-center gap-2 text-base">
+                                <Music className="h-4 w-4" />
+                                <span>{shouldShowChords(playlistSong.song.id) ? `Chords in ${getSongKey(playlistSong.song.id)}` : 'Chords'}</span>
+                              </h4>
                               <button
                                 onClick={() => toggleShowChords(playlistSong.song.id)}
-                                className={`h-8 px-3 py-1.5 text-xs rounded-md transition-colors ${
+                                onMouseDown={e => e.preventDefault()}
+                                onFocus={e => e.target.blur()}
+                                className={`h-10 px-4 py-2 text-sm font-medium rounded-lg transition-all shadow-sm focus:outline-none focus:ring-0 focus:ring-offset-0 focus:ring-offset-transparent focus:ring-transparent focus:shadow-none select-none active:bg-transparent active:scale-100 ${
                                   shouldShowChords(playlistSong.song.id)
-                                    ? 'bg-transparent border border-input hover:bg-accent hover:text-accent-foreground'
-                                    : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                                    ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90 border border-destructive/20 hover:border-destructive/50'
+                                    : 'bg-primary text-primary-foreground hover:bg-primary/90 border border-primary/20 hover:border-primary/50'
                                 }`}
                               >
-
-                                {shouldShowChords(playlistSong.song.id) ? 'Close' : 'Show Chords'}
+                                {shouldShowChords(playlistSong.song.id) ? 'Back to Nashville' : 'Show Chords'}
                               </button>
-                              {shouldShowChords(playlistSong.song.id) && (
-                                <div className="flex items-center gap-1">
-                                  <span className="text-sm text-muted-foreground">Key:</span>
-                                  <Select 
-                                    value={getSongKey(playlistSong.song.id)} 
-                                    onValueChange={(key) => setSongKey(playlistSong.song.id, key)}
-                                  >
-                                    <SelectTrigger className="h-8 w-[80px] text-xs">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].map(key => (
-                                        <SelectItem key={key} value={key} className="text-xs">
-                                          {key}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              )}
                             </div>
+                            {shouldShowChords(playlistSong.song.id) && (
+                              <div className="mt-3 pt-3 border-t border-border">
+                                <div className="space-y-2">
+                                  <div className="text-sm text-muted-foreground">Select Key:</div>
+                                  <div className="w-full overflow-x-auto pb-1">
+                                    <div className="flex gap-1.5 w-max">
+                                      {['Ab', 'A', 'A#', 'Bb', 'B', 'C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F', 'F#', 'Gb', 'G', 'G#'].map(key => (
+                                        <button
+                                          key={key}
+                                          onClick={() => setSongKey(playlistSong.song.id, key)}
+                                          onMouseDown={e => e.preventDefault()}
+                                          onFocus={e => e.target.blur()}
+                                          className={`min-w-[34px] h-9 flex-shrink-0 flex items-center justify-center text-xs font-medium rounded border transition-all focus:outline-none focus:ring-0 focus:ring-offset-0 focus:ring-offset-transparent focus:ring-transparent focus:shadow-none select-none active:bg-transparent active:scale-100 ${
+                                            getSongKey(playlistSong.song.id) === key
+                                              ? 'bg-primary text-primary-foreground border-primary scale-105'
+                                              : 'bg-background hover:bg-accent hover:text-accent-foreground border-input'
+                                          }`}
+                                          title={`Key of ${key}`}
+                                        >
+                                          {key}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                          <div className="whitespace-pre-wrap font-mono text-sm bg-muted/10 p-4 rounded-md">
+                          <div 
+                            className="whitespace-pre-wrap font-mono bg-muted/10 p-4 rounded-md"
+                            style={{ 
+                              fontSize: `${contentFontSize}px`,
+                              lineHeight: '1.5'
+                            }}
+                          >
                             {shouldShowChords(playlistSong.song.id)
                               ? convertNashvilleToChords(playlistSong.song.chords, getSongKey(playlistSong.song.id))
                               : playlistSong.song.chords}
@@ -896,7 +916,10 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
                               <summary className="text-muted-foreground cursor-pointer hover:text-foreground text-xs">
                                 Show original Nashville numbers
                               </summary>
-                              <div className="mt-2 p-2 bg-muted/5 rounded font-mono whitespace-pre-wrap text-sm">
+                              <div 
+                                className="mt-2 p-2 bg-muted/5 rounded font-mono whitespace-pre-wrap"
+                                style={{ fontSize: `${contentFontSize}px` }}
+                              >
                                 {playlistSong.song.chords}
                               </div>
                             </details>

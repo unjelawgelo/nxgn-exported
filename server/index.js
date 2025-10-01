@@ -17,6 +17,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 // Allowed origins configuration
 const allowedOrigins = [
+
   // Production frontend URLs
   'https://nxgn-jrevfam.vercel.app',  // Your Vercel frontend
   'http://nxgn-jrevfam.vercel.app',   // HTTP version (for testing)
@@ -30,6 +31,7 @@ const allowedOrigins = [
   'http://10.0.2.2:5173'   // Android emulator
 ];
 
+
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
@@ -39,10 +41,12 @@ const corsOptions = {
     const isAllowed = allowedOrigins.some(pattern => {
       if (typeof pattern === 'string') {
         return origin === pattern;
+
       } else if (pattern.includes('*')) {
         // Handle wildcard patterns like 'http://192.168.*'
         const regex = new RegExp(pattern.replace(/\*/g, '.*'));
         return regex.test(origin);
+
       } else if (pattern instanceof RegExp) {
         return pattern.test(origin);
       }

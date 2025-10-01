@@ -9,6 +9,7 @@ import UserManager from './UserManager'
 import ProfileSettings from './ProfileSettings'
 import { Availability } from './Availability'
 import { DashboardView } from './DashboardView'
+import LearnModule from './LearnModule'
 import { Button } from './ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ProfileDropdown } from './layout/ProfileDropdown';
@@ -56,7 +57,9 @@ interface Ministry {
 
 export default function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'songs' | 'playlists' | 'ministries' | 'users' | 'settings' | 'home' | 'availability'>(() => {
+
+  const [activeTab, setActiveTab] = useState<'songs' | 'playlists' | 'ministries' | 'users' | 'settings' | 'home' | 'availability' | 'learn'>(() => {
+
     // Load active tab from localStorage, default to 'home'
     try {
       const savedTab = localStorage.getItem('nxgn:activeTab')
@@ -195,6 +198,8 @@ export default function Dashboard({ user, onLogout, onUserUpdate }: DashboardPro
     const commonProps = { user, ministryId: selectedMinistryId };
     
     switch (activeTab) {
+      case 'learn':
+        return <LearnModule />
       case 'home':
         return <DashboardView {...commonProps} />
       case 'songs':

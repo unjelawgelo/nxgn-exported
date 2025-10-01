@@ -17,12 +17,17 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 // Allowed origins configuration
 const allowedOrigins = [
-  // Production frontend URL
+  // Production frontend URLs
   'https://nxgn-jrevfam.vercel.app',  // Your Vercel frontend
+  'http://nxgn-jrevfam.vercel.app',   // HTTP version (for testing)
+  'https://www.nxgn-jrevfam.vercel.app', // With www
+  'http://www.nxgn-jrevfam.vercel.app',  // With www and HTTP
   
   // Development URLs
   'http://localhost:5173',  // Local frontend development
-  'http://localhost:4000'   // Local API development
+  'http://localhost:4000',  // Local API development
+  'http://192.168.*',       // Local network for mobile testing
+  'http://10.0.2.2:5173'   // Android emulator
 ];
 
 const corsOptions = {
@@ -34,6 +39,10 @@ const corsOptions = {
     const isAllowed = allowedOrigins.some(pattern => {
       if (typeof pattern === 'string') {
         return origin === pattern;
+      } else if (pattern.includes('*')) {
+        // Handle wildcard patterns like 'http://192.168.*'
+        const regex = new RegExp(pattern.replace(/\*/g, '.*'));
+        return regex.test(origin);
       } else if (pattern instanceof RegExp) {
         return pattern.test(origin);
       }
@@ -59,9 +68,15 @@ const corsOptions = {
     'Access-Control-Allow-Credentials'
   ],
   exposedHeaders: [
+    'Content-Length',
+    'X-Foo',
+    'X-Bar',
     'Content-Range',
     'X-Total-Count'
-  ]
+  ],
+  maxAge: 86400, // 24 hours
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 };
 
 // Apply CORS with the specified options

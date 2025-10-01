@@ -56,7 +56,15 @@ interface Ministry {
 
 export default function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'songs' | 'playlists' | 'ministries' | 'users' | 'settings' | 'home' | 'availability'>('home')
+  const [activeTab, setActiveTab] = useState<'songs' | 'playlists' | 'ministries' | 'users' | 'settings' | 'home' | 'availability'>(() => {
+    // Load active tab from localStorage, default to 'home'
+    try {
+      const savedTab = localStorage.getItem('nxgn:activeTab')
+      return (savedTab as any) || 'home'
+    } catch (e) {
+      return 'home'
+    }
+  })
   const [ministry, setMinistry] = useState<Ministry | null>(null)
   const [selectedMinistryId, setSelectedMinistryId] = useState<string | undefined>(() => {
     try {
@@ -115,12 +123,31 @@ export default function Dashboard({ user, onLogout, onUserUpdate }: DashboardPro
   useEffect(() => {
     try {
       if (user.role === 'main_admin' && selectedMinistryId) {
-        localStorage.setItem('nxgn:lastMinistry', selectedMinistryId)
+        localStorage.setItem('nxgn:lastMinistry', selectedMinistryId);
       }
     } catch (e) {
       // ignore storage errors
     }
-  }, [selectedMinistryId, user.role])
+  }, [selectedMinistryId, user.role]);
+
+  // Handle logout - clear the active tab from localStorage
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem('nxgn:activeTab');
+    } catch (e) {
+      // ignore storage errors
+    }
+    onLogout();
+  }
+
+  // Persist active tab
+  useEffect(() => {
+    try {
+      localStorage.setItem('nxgn:activeTab', activeTab)
+    } catch (e) {
+      // ignore storage errors
+    }
+  }, [activeTab])
 
   // Logo glow on reload for 3 seconds
   const [logoGlow, setLogoGlow] = useState<boolean>(true)
@@ -155,17 +182,17 @@ export default function Dashboard({ user, onLogout, onUserUpdate }: DashboardPro
   const canAccessTab = (tab: string) => {
     switch (tab) {
       case 'ministries':
-        return user.role === 'main_admin'
+        return user.role === 'main_admin';
       case 'users':
         // Only admins (main_admin or sub_admin) can access Members tab
-        return user.role === 'main_admin' || user.role === 'sub_admin'
+        return user.role === 'main_admin' || user.role === 'sub_admin';
       default:
-        return true
+        return true;
     }
-  }
+  };
 
   const renderContent = () => {
-    const commonProps = { user, ministryId: selectedMinistryId } as const;
+    const commonProps = { user, ministryId: selectedMinistryId };
     
     switch (activeTab) {
       case 'home':

@@ -77,46 +77,100 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
   const toggleShowChords = (songId: string) => {
     setShowChords(prev => ({
       ...prev,
-      [songId]: !(prev[songId] ?? true) // Default to true (show chords) if not set
+      [songId]: !(prev[songId] ?? false) // Default to false (hide chords) if not set
     }));
   };
 
   // Check if we should show chords or numbers for a song
   const shouldShowChords = (songId: string) => {
-    return showChords[songId] ?? true; // Default to true (show chords) if not set
+    return showChords[songId] ?? false; // Default to false (hide chords) if not set
   };
 
   // Convert Nashville numbers to chords based on selected key
+  // Define all possible chord roots with their enharmonic equivalents and preferred notation for each key
+  const chordRoots = [
+    { name: 'C', index: 0, preferred: 'C' },
+    { name: 'C#', index: 1, preferred: 'C#', enharmonic: 'Db' },
+    { name: 'Db', index: 1, preferred: 'Db', enharmonic: 'C#' },
+    { name: 'D', index: 2, preferred: 'D' },
+    { name: 'D#', index: 3, preferred: 'D#', enharmonic: 'Eb' },
+    { name: 'Eb', index: 3, preferred: 'Eb', enharmonic: 'D#' },
+    { name: 'E', index: 4, preferred: 'E' },
+    { name: 'F', index: 5, preferred: 'F' },
+    { name: 'F#', index: 6, preferred: 'F#', enharmonic: 'Gb' },
+    { name: 'Gb', index: 6, preferred: 'Gb', enharmonic: 'F#' },
+    { name: 'G', index: 7, preferred: 'G' },
+    { name: 'G#', index: 8, preferred: 'G#', enharmonic: 'Ab' },
+    { name: 'Ab', index: 8, preferred: 'Ab', enharmonic: 'G#' },
+    { name: 'A', index: 9, preferred: 'A' },
+    { name: 'A#', index: 10, preferred: 'A#', enharmonic: 'Bb' },
+    { name: 'Bb', index: 10, preferred: 'Bb', enharmonic: 'A#' },
+    { name: 'B', index: 11, preferred: 'B' }
+  ];
+
+  // Define the scale degrees and their qualities for major keys
+  const majorScaleDegrees = [
+    { degree: 1, quality: '', name: 'I' },      // Major
+    { degree: 2, quality: 'm', name: 'ii' },    // Minor
+    { degree: 3, quality: 'm', name: 'iii' },   // Minor
+    { degree: 4, quality: '', name: 'IV' },     // Major
+    { degree: 5, quality: '', name: 'V' },      // Major (dominant)
+    { degree: 6, quality: 'm', name: 'vi' },    // Minor
+    { degree: 7, quality: 'dim', name: 'vii°' } // Diminished
+  ];
+
+  // Function to get the preferred notation for a given key
+  const getPreferredNotation = (key: string) => {
+    // These keys are typically notated with flats
+    const flatKeys = ['Db', 'Eb', 'Gb', 'Ab', 'Bb'];
+    const isFlatKey = flatKeys.includes(key);
+    
+    return (noteIndex: number, currentKey: string) => {
+      const roots = chordRoots.filter(cr => cr.index === noteIndex);
+      if (roots.length === 0) return '';
+      
+      // If it's a flat key, prefer flat notation, otherwise prefer sharp/natural
+      if (isFlatKey) {
+        const flatNote = roots.find(cr => cr.name.includes('b') || cr.name.length === 1);
+        return flatNote ? flatNote.name : roots[0].name;
+      } else {
+        const sharpNote = roots.find(cr => !cr.name.includes('b'));
+        return sharpNote ? sharpNote.name : roots[0].name;
+      }
+    };
+  };
+
   const convertNashvilleToChords = (text: string, key: string) => {
     if (!text) return '';
     
-    // Define the major scale notes in order
-    const majorScale = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    // Normalize the key (handle both sharp and flat notations)
+    const normalizedKey = key.replace(/\s+/g, ''); // Remove any spaces
     
-    // Find the index of the selected key
-    const keyIndex = majorScale.indexOf(key);
-    if (keyIndex === -1) return text; // If key not found, return original text
+    // Find the key in our chord roots
+    const keyInfo = chordRoots.find(cr => 
+      cr.name === normalizedKey || cr.enharmonic === normalizedKey
+    );
     
-    // Define the Nashville number to chord quality mapping
-    const nashvilleChords = {
-      '1': '',    // Major
-      '2': 'm',   // Minor
-      '3': 'm',   // Minor
-      '4': '',    // Major
-      '5': '',    // Major (dominant)
-      '6': 'm',   // Minor
-      '7': 'dim'  // Diminished
-    };
+    if (!keyInfo) return text; // If key not found, return original text
+    
+    // Get the preferred notation function for this key
+    const getPreferredNote = getPreferredNotation(normalizedKey);
     
     // Create a map of Nashville numbers to actual chords in the selected key
     const chordMap: Record<string, string> = {};
     
     // Generate chords for each degree
-    Object.entries(nashvilleChords).forEach(([degree, quality]) => {
-      const degreeNum = parseInt(degree);
+    majorScaleDegrees.forEach(({ degree, quality }) => {
       // Calculate the note index (0-based) - using the major scale formula
-      const noteIndex = (keyIndex + [0, 2, 4, 5, 7, 9, 11][degreeNum - 1]) % 12;
-      chordMap[degree] = majorScale[noteIndex] + quality;
+      const noteIndex = (keyInfo.index + [0, 2, 4, 5, 7, 9, 11][degree - 1]) % 12;
+      
+      // Get the preferred note name for this degree
+      const noteName = getPreferredNote(noteIndex, normalizedKey);
+      
+      // Special case for diminished chords - use '°' symbol instead of 'dim'
+      const suffix = quality === 'dim' ? '°' : quality;
+      
+      chordMap[degree.toString()] = noteName + suffix;
     });
     
     // Replace Nashville numbers with chords in the text
@@ -553,20 +607,27 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
 
                   <div className="flex items-center gap-1.5">
                     <button
-                      onClick={decreaseFont}
-                      className="h-8 w-8 flex items-center justify-center text-xs rounded-md border border-input bg-transparent hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-0 active:bg-transparent active:text-foreground"
+
+                      onClick={(e) => { e.preventDefault(); decreaseFont() }}
+                      onMouseDown={e => { e.preventDefault(); e.stopPropagation() }}
+                      onFocus={e => e.target.blur()}
+                      className="h-8 w-8 flex items-center justify-center text-xs rounded-md border border-input bg-transparent hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-0 focus:ring-offset-0 focus:ring-offset-transparent focus:ring-transparent focus:shadow-none select-none active:bg-transparent active:scale-100"
                     >
                       A-
                     </button>
                     <button
-                      onClick={resetFont}
-                      className="h-8 px-3 flex items-center justify-center text-xs rounded-md border border-input bg-transparent hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-0 active:bg-transparent active:text-foreground"
+                      onClick={(e) => { e.preventDefault(); resetFont() }}
+                      onMouseDown={e => { e.preventDefault(); e.stopPropagation() }}
+                      onFocus={e => e.target.blur()}
+                      className="h-8 px-3 flex items-center justify-center text-xs rounded-md border border-input bg-transparent hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-0 focus:ring-offset-0 focus:ring-offset-transparent focus:ring-transparent focus:shadow-none select-none active:bg-transparent active:scale-100"
                     >
                       Reset
                     </button>
                     <button
-                      onClick={increaseFont}
-                      className="h-8 w-8 flex items-center justify-center text-xs rounded-md border border-input bg-transparent hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-0 active:bg-transparent active:text-foreground"
+                      onClick={(e) => { e.preventDefault(); increaseFont() }}
+                      onMouseDown={e => { e.preventDefault(); e.stopPropagation() }}
+                      onFocus={e => e.target.blur()}
+                      className="h-8 w-8 flex items-center justify-center text-xs rounded-md border border-input bg-transparent hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-0 focus:ring-offset-0 focus:ring-offset-transparent focus:ring-transparent focus:shadow-none select-none active:bg-transparent active:scale-100"
                     >
                       A+
                     </button>
@@ -574,87 +635,105 @@ export default function SongLibrary({ user, ministryId }: SongLibraryProps) {
                 </div>
 
                 {/* Content */}
-                <div className="whitespace-pre-wrap font-mono" style={{ fontSize: `${contentFontSize}px` }}>
+                <div className="whitespace-pre-wrap font-mono">
                   {(displayMode === 'both' || displayMode === 'lyrics') && viewingSong.lyrics && (
                     <div className="mb-6">
-                      <h4 className="font-semibold mb-2">Lyrics</h4>
-                      <div>{viewingSong.lyrics}</div>
+                      <h4 className="font-semibold mb-2 text-base">Lyrics</h4>
+                      <div style={{ fontSize: `${contentFontSize}px`, lineHeight: '1.5' }}>{viewingSong.lyrics}</div>
                     </div>
                   )}
 
                   
                   {(displayMode === 'both' || displayMode === 'chords') && (
 
-                    <div>
+                    <div style={{ fontSize: '0.875rem' }}>
                       <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-semibold">Chords in {selectedKey}</h4>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => toggleShowChords(viewingSong.id)}
-                            className={`h-8 px-3 py-1.5 text-xs rounded-md transition-colors ${
-                              shouldShowChords(viewingSong.id)
-                                ? 'bg-transparent border border-input hover:bg-accent hover:text-accent-foreground'
-                                : 'bg-primary text-primary-foreground hover:bg-primary/90'
-                            }`}
-                          >
-                            {shouldShowChords(viewingSong.id) ? 'Close' : 'Show Chords'}
-                          </button>
-                          <div className="flex items-center gap-1">
-                            <span className="text-sm text-muted-foreground">Key:</span>
-                            <Select 
-                              value={selectedKey} 
-                              onValueChange={setSelectedKey}
-                            >
-                              <SelectTrigger className="h-8 w-[80px] text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].map(key => (
-                                  <SelectItem key={key} value={key} className="text-xs">
-                                    {key}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
+
+                        <h4 className="font-semibold text-base">
+                          {shouldShowChords(viewingSong.id) ? `Chords in ${selectedKey}` : 'Chords'}
+                        </h4>
+                        <button
+                          onClick={() => toggleShowChords(viewingSong.id)}
+                          className={`h-10 px-4 py-2 text-sm font-medium rounded-lg transition-all shadow-sm ${
+                            shouldShowChords(viewingSong.id)
+                              ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90 border border-destructive/20 hover:border-destructive/50'
+                              : 'bg-primary text-primary-foreground hover:bg-primary/90 border border-primary/20 hover:border-primary/50'
+                          }`}
+                        >
+                          {shouldShowChords(viewingSong.id) ? 'Back to Nashville' : 'Show Chords'}
+                        </button>
                       </div>
                       
-                      {/* Chord Progression Reference */}
-                      <div className="mb-4 p-3 bg-muted/20 rounded-md">
-                        <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-                          {['1', '2', '3', '4', '5', '6'].map((degree) => (
-                            <div key={degree} className="flex flex-col items-center p-1.5 bg-background rounded border text-center">
-                              <span className="text-xs text-muted-foreground">{degree}</span>
-                              <span className="font-mono text-sm font-medium">
-                                {convertNashvilleToChords(degree, selectedKey)}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      {/* Converted Chords */}
-                      {viewingSong.chords && (
-                        <div className="mt-2">
-                          <div className="whitespace-pre-wrap font-mono bg-background p-3 rounded border">
-                            {shouldShowChords(viewingSong.id)
-                              ? convertNashvilleToChords(viewingSong.chords, selectedKey)
-                              : viewingSong.chords}
-                          </div>
-                          
-                          {/* Original Nashville Numbers (collapsible) - Only show when displaying chords */}
-                          {shouldShowChords(viewingSong.id) && (
-                            <details className="mt-3 text-sm">
-                              <summary className="text-muted-foreground cursor-pointer hover:text-foreground">
-                                Show original Nashville numbers
-                              </summary>
-                              <div className="mt-2 p-2 bg-muted/10 rounded font-mono whitespace-pre-wrap">
-                                {viewingSong.chords}
+                      {/* Chord Progression Reference - Only show when chords are visible */}
+                      {shouldShowChords(viewingSong.id) && (
+                        <div className="mb-4 p-3 bg-muted/20 rounded-md">
+                          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                            {['1', '2', '3', '4', '5', '6'].map((degree) => (
+                              <div key={degree} className="flex flex-col items-center p-1.5 bg-background rounded border text-center">
+                                <span className="text-xs text-muted-foreground">{degree}</span>
+                                <span className="font-mono text-sm font-medium">
+                                  {convertNashvilleToChords(degree, selectedKey)}
+                                </span>
                               </div>
-                            </details>
-                          )}
+                            ))}
+                          </div>
+                          <div className="mt-3 pt-3 border-t border-border">
+                            <div className="space-y-2">
+                              <div className="text-sm text-muted-foreground">Select Key:</div>
+                              <div className="w-full overflow-x-auto pb-2">
+                                <div className="flex gap-1.5 w-max">
+                                  {['Ab', 'A', 'A#', 'Bb', 'B', 'C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F', 'F#', 'Gb', 'G', 'G#'].map(key => (
+                                    <button
+                                      key={key}
+                                      onClick={() => setSelectedKey(key)}
+                                      className={`min-w-[35px] h-9 flex-shrink-0 flex items-center justify-center text-sm font-medium rounded-md border transition-all
+                                        ${selectedKey === key 
+                                          ? 'bg-primary text-primary-foreground border-primary scale-105' 
+                                          : 'bg-background hover:bg-accent hover:text-accent-foreground border-input'}
+                                      `}
+                                      title={`Key of ${key}`}
+                                    >
+                                      {key}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
+                      )}
+                      
+                      {/* Chords Content */}
+                      {viewingSong.chords && (
+                        <div 
+                          className="whitespace-pre-wrap bg-muted/10 p-4 rounded-md"
+                          style={{ 
+                            fontSize: `${contentFontSize}px`,
+                            lineHeight: '1.5'
+                          }}
+                        >
+                          {shouldShowChords(viewingSong.id)
+                            ? convertNashvilleToChords(viewingSong.chords, selectedKey)
+                            : viewingSong.chords}
+                        </div>
+                      )}
+                      
+                      {/* Original Nashville Numbers (collapsible) - Only show when displaying chords */}
+                      {shouldShowChords(viewingSong.id) && viewingSong.chords && (
+                        <details className="mt-3 text-sm">
+                          <summary className="text-muted-foreground cursor-pointer hover:text-foreground text-xs">
+                            Show original Nashville numbers
+                          </summary>
+                          <div 
+                            className="mt-2 p-2 bg-muted/10 rounded font-mono whitespace-pre-wrap"
+                            style={{ 
+                              fontSize: `${contentFontSize}px`,
+                              lineHeight: '1.5'
+                            }}
+                          >
+                            {viewingSong.chords}
+                          </div>
+                        </details>
                       )}
                     </div>
                   )}

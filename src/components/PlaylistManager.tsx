@@ -868,6 +868,7 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
                                 }`}
                               >
                                 {shouldShowChords(playlistSong.song.id) ? 'Back to Nashville' : 'Show Chords'}
+
                               </button>
                             </div>
                             {shouldShowChords(playlistSong.song.id) && (

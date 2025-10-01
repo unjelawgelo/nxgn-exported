@@ -57,7 +57,9 @@ interface Ministry {
 
 export default function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   const [activeTab, setActiveTab] = useState<'songs' | 'playlists' | 'ministries' | 'users' | 'settings' | 'home' | 'availability' | 'learn'>(() => {
+
     // Load active tab from localStorage, default to 'home'
     try {
       const savedTab = localStorage.getItem('nxgn:activeTab')

@@ -8,14 +8,59 @@ import songsRouter from './routes/songs.js';
 import playlistsRouter from './routes/playlists.js';
 import playlistSongsRouter from './routes/playlistSongs.js';
 import joinRequestsRouter from './routes/joinRequests.js';
+import availabilityRouter from './routes/availability.js';
 
 const app = express();
-app.use(cors());
+
+// Configure CORS with specific origin and credentials support
+const corsOptions = {
+  origin: 'http://localhost:5173', // Your frontend URL
+  credentials: true, // Allow credentials (cookies, authorization headers, etc.)
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'Access-Control-Allow-Origin',
+    'Access-Control-Allow-Credentials'
+  ],
+  exposedHeaders: [
+    'Content-Range',
+    'X-Total-Count'
+  ]
+};
+
+// Apply CORS with the specified options
+app.use(cors(corsOptions));
+
+// Handle preflight requests
+app.options('*', cors(corsOptions));
+
+// Add headers before the routes are defined
+app.use(function (req, res, next) {
+  // Allow requests from the frontend
+  res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
+  res.header('Access-Control-Allow-Credentials', true);
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
+
 app.use(express.json({ limit: '1mb' }));
 
 // Add request logging middleware
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+  // Redact UUIDs and other sensitive IDs from the URL before logging
+  const redactedUrl = req.originalUrl.replace(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/gi, '[REDACTED_ID]');
+  console.log(`[${new Date().toISOString()}] ${req.method} ${redactedUrl}`);
   next();
 });
 
@@ -34,6 +79,7 @@ app.use('/api/songs', songsRouter);
 app.use('/api/playlists', playlistsRouter);
 app.use('/api/playlist-songs', playlistSongsRouter);
 app.use('/api/join-requests', joinRequestsRouter);
+app.use('/api/availability', availabilityRouter);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`API listening on http://localhost:${PORT}`));

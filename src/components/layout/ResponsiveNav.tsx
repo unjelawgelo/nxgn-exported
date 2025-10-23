@@ -41,10 +41,12 @@ export function ResponsiveNav({ activeTab, onTabChange, userRole, className, onI
             key={item.value}
             onClick={(e) => {
               e.preventDefault();
-              onTabChange(item.value);
-              if (onItemClick) {
-                // Close the mobile menu with a slight delay for better UX
-                setTimeout(() => onItemClick(), 100);
+              if (item.value !== 'availability') {
+                onTabChange(item.value);
+                if (onItemClick) {
+                  // Close the mobile menu with a slight delay for better UX
+                  setTimeout(() => onItemClick(), 100);
+                }
               }
             }}
             className={cn(

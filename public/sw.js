@@ -1,126 +1,92 @@
-const CACHE_NAME = 'nxgen-v2';
+// Minimal service worker for PWA - doesn't interfere with app loading
+const CACHE_NAME = 'nxgen-v3';
 
-// Install event - minimal caching
+// Install event - just activate immediately
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installing...');
+  console.log('SW installed');
   self.skipWaiting();
 });
 
-// Activate event - clean up old caches
+// Activate event - take control immediately
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Activating...');
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('Service Worker: Clearing old cache');
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
-  );
-  return self.clients.claim();
+  console.log('SW activated');
+  self.clients.claim();
 });
 
-// Fetch event - network-first, cache as fallback
+// Fetch event - only handle offline HTML fallback
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  const url = new URL(request.url);
-
-  // Skip non-GET requests and API calls
-  if (request.method !== 'GET' || url.pathname.startsWith('/api/')) {
-    return;
-  }
-
-  // For HTML requests, try network first, then cache
+  
+  // Only intercept HTML requests when offline
   if (request.headers.get('accept')?.includes('text/html')) {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Cache the successful response
-          if (response.ok) {
-            const responseToCache = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseToCache);
-            });
+      fetch(request).catch(() => {
+        // Network failed - serve cached version or offline page
+        return caches.match(request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
           }
-          return response;
-        })
-        .catch(() => {
-          // If network fails, try cache
-          return caches.match(request).then((cachedResponse) => {
-            if (cachedResponse) {
-              return cachedResponse;
-            }
-            // If no cache, return offline page
-            return caches.match('/offline.html').then((offlineResponse) => {
-              if (offlineResponse) {
-                return offlineResponse;
-              }
-              // Final fallback - basic HTML
-              return new Response(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                  <title>Offline - NXGN</title>
-                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                  <style>
-                    body { 
-                      font-family: system-ui; 
-                      text-align: center; 
-                      padding: 2rem;
-                      background: #0f172a;
-                      color: #e2e8f0;
-                      min-height: 100vh;
-                      display: flex;
-                      align-items: center;
-                      justify-content: center;
-                      flex-direction: column;
-                    }
-                    .logo { 
-                      font-size: 3rem; 
-                      font-weight: bold; 
-                      margin-bottom: 1rem;
-                      background: #3b82f6;
-                      color: white;
-                      width: 80px;
-                      height: 80px;
-                      border-radius: 20px;
-                      display: flex;
-                      align-items: center;
-                      justify-content: center;
-                      margin-bottom: 2rem;
-                    }
-                  </style>
-                </head>
-                <body>
-                  <div class="logo">NXGN</div>
-                  <h1>You're Offline</h1>
-                  <p>Check your connection and try again.</p>
-                  <button onclick="window.location.reload()" style="
-                    background: #3b82f6;
-                    color: white;
-                    border: none;
-                    padding: 0.75rem 2rem;
-                    border-radius: 8px;
-                    margin-top: 1rem;
-                    cursor: pointer;
-                  ">Reload</button>
-                </body>
-                </html>
-              `, {
-                headers: { 'Content-Type': 'text/html' }
-              });
-            });
+          
+          // Return a simple offline page
+          return new Response(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <title>Offline - NXGN</title>
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <style>
+                body { 
+                  font-family: system-ui; 
+                  text-align: center; 
+                  padding: 2rem;
+                  background: #0f172a;
+                  color: #e2e8f0;
+                  min-height: 100vh;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  flex-direction: column;
+                }
+                .logo { 
+                  font-size: 3rem; 
+                  font-weight: bold; 
+                  background: #3b82f6;
+                  color: white;
+                  width: 80px;
+                  height: 80px;
+                  border-radius: 20px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  margin-bottom: 2rem;
+                }
+                button {
+                  background: #3b82f6;
+                  color: white;
+                  border: none;
+                  padding: 0.75rem 2rem;
+                  border-radius: 8px;
+                  margin-top: 1rem;
+                  cursor: pointer;
+                  font-size: 1rem;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="logo">NXGN</div>
+              <h1>You're Offline</h1>
+              <p>Check your internet connection and try again.</p>
+              <button onclick="window.location.reload()">Reload App</button>
+            </body>
+            </html>
+          `, {
+            headers: { 'Content-Type': 'text/html' }
           });
-        })
+        });
+      })
     );
-  } else {
-    // For non-HTML requests, don't intercept - let them fail naturally
-    return;
   }
+  // For all other requests, don't intercept
 });
 
 // Handle background sync for offline operations

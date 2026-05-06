@@ -113,13 +113,20 @@ export interface User {
 function App() {
   const [currentScreen, setCurrentScreen] = useState<'auth' | 'dashboard'>('auth')
   const [user, setUser] = useState<User | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     // Check if user is already logged in
-    const savedUser = localStorage.getItem('nxgn_user')
-    if (savedUser) {
-      setUser(JSON.parse(savedUser))
-      setCurrentScreen('dashboard')
+    try {
+      const savedUser = localStorage.getItem('nxgn_user')
+      if (savedUser) {
+        setUser(JSON.parse(savedUser))
+        setCurrentScreen('dashboard')
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error)
+    } finally {
+      setIsLoading(false)
     }
   }, [])
 
@@ -143,6 +150,60 @@ function App() {
 
 
 
+
+  // Show loading screen while initializing
+  if (isLoading) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+        color: '#e2e8f0',
+        fontFamily: 'system-ui, -apple-system, sans-serif'
+      }}>
+        <div style={{
+          width: '80px',
+          height: '80px',
+          margin: '0 auto 2rem',
+          background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+          borderRadius: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '2rem',
+          fontWeight: 'bold',
+          boxShadow: '0 10px 30px rgba(59, 130, 246, 0.3)',
+          animation: 'pulse 2s infinite'
+        }}>
+          NXGN
+        </div>
+        <div style={{
+          fontSize: '1.2rem',
+          fontWeight: 500,
+          marginBottom: '1rem'
+        }}>
+          Loading...
+        </div>
+        <div style={{
+          fontSize: '0.875rem',
+          color: '#94a3b8'
+        }}>
+          Please wait
+        </div>
+                <style dangerouslySetInnerHTML={{
+          __html: `
+            @keyframes pulse {
+              0%, 100% { transform: scale(1); opacity: 1; }
+              50% { transform: scale(1.05); opacity: 0.8; }
+            }
+          `
+        }} />
+      </div>
+    );
+  }
 
   return (
     <ErrorBoundary>

@@ -189,19 +189,40 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
 
   const loadPlaylistSongs = async (playlistId: string) => {
     try {
+      // First ensure songs are loaded if they aren't already
+      if (songs.length === 0) {
+        await loadSongs()
+      }
+
       const playlistSongLinks = await blink.db.playlistSongs.list({
         where: { playlistId: playlistId },
         orderBy: { position: 'asc' }
       })
 
-      // Map playlist songs with their data
-      const playlistSongList = playlistSongLinks.map((link: any) => {
-        const song = songs.find(s => s.id === link.songId)
-        return {
-          ...link,
-          song
+      // Get song details for each playlist song
+      const playlistSongList = []
+      for (const link of playlistSongLinks) {
+        let song = songs.find(s => s.id === link.songId)
+        
+        // If song not found in local state, try to fetch it directly
+        if (!song && ministryId) {
+          try {
+            const songList = await blink.db.songs.list({
+              where: { id: link.songId, ministryId: ministryId }
+            })
+            song = songList.length > 0 ? songList[0] : null
+          } catch (err) {
+            console.warn(`Failed to fetch song ${link.songId}:`, err)
+          }
         }
-      }).filter(ps => ps.song) // Only include songs that still exist
+
+        if (song) {
+          playlistSongList.push({
+            ...link,
+            song
+          })
+        }
+      }
       
       setPlaylistSongs(playlistSongList as PlaylistSong[])
 
@@ -213,7 +234,7 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
       const usedSongIds = playlistSongLinks.map((link: any) => link.songId)
       setAvailableSongs(songs.filter(song => !usedSongIds.includes(song.id)))
     } catch (err) {
-      console.error('Failed to load playlist songs')
+      console.error('Failed to load playlist songs:', err)
     }
   }
 

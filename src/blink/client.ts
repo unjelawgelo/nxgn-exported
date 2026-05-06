@@ -255,19 +255,42 @@ async function playlists_delete(id: string) {
 
 async function playlistSongs_list(opts?: ListOpts) {
   const where = opts?.where || {};
-  // For our usage, we only need to support filtering by playlistId and optionally songId for deletes
-  if (where.playlistId && where.songId) {
-    // No direct list API; emulate by checking existence via songs list and mapping minimal shape
-    const songs = await api.get(`/playlist-songs?playlistId=${encodeURIComponent(where.playlistId)}`);
-    return songs
-      .filter((s: any) => s.id === where.songId)
-      .map((s: any) => ({ id: s.id, playlistId: where.playlistId, songId: s.id }));
+  const queryKey = JSON.stringify(where);
+  
+  try {
+    if (offlineDetector.getStatus().isOffline) {
+      const cachedData = offlineCache.get<any[]>('playlistSongs', queryKey);
+      if (cachedData) {
+        return cachedData;
+      }
+      throw new Error('No cached data available');
+    }
+
+    let result;
+    // For our usage, we only need to support filtering by playlistId and optionally songId for deletes
+    if (where.playlistId && where.songId) {
+      // No direct list API; emulate by checking existence via songs list and mapping minimal shape
+      const songs = await api.get(`/playlist-songs?playlistId=${encodeURIComponent(where.playlistId)}`);
+      result = songs
+        .filter((s: any) => s.id === where.songId)
+        .map((s: any) => ({ id: s.id, playlistId: where.playlistId, songId: s.id }));
+    } else if (where.playlistId) {
+      const songs = await api.get(`/playlist-songs?playlistId=${encodeURIComponent(where.playlistId)}`);
+      result = songs.map((s: any, idx: number) => ({ id: s.id, playlistId: where.playlistId, songId: s.id, position: idx }));
+    } else {
+      result = [];
+    }
+    
+    offlineCache.set('playlistSongs', result, queryKey);
+    return result;
+  } catch (error) {
+    const cachedData = offlineCache.get<any[]>('playlistSongs', queryKey);
+    if (cachedData) {
+      console.warn('Using cached playlist songs data due to network error:', error);
+      return cachedData;
+    }
+    throw error;
   }
-  if (where.playlistId) {
-    const songs = await api.get(`/playlist-songs?playlistId=${encodeURIComponent(where.playlistId)}`);
-    return songs.map((s: any, idx: number) => ({ id: s.id, playlistId: where.playlistId, songId: s.id, position: idx }));
-  }
-  return [];
 }
 
 async function playlistSongs_create(row: any) {

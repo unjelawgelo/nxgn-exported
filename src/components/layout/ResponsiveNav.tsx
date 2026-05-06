@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { cn } from '../../lib/utils';
-import { Home, Music, ListMusic, Users, Settings, Calendar, BookOpen, Lock } from 'lucide-react';
+import { Home, Music, ListMusic, Users, Settings, Calendar } from 'lucide-react';
 
 interface NavItem {
   name: string;
@@ -13,8 +13,6 @@ const navItems: NavItem[] = [
   { name: 'Dashboard', icon: Home, value: 'home' },
   { name: 'Songs', icon: Music, value: 'songs' },
   { name: 'Line-ups', icon: ListMusic, value: 'playlists' },
-  { name: 'Availability', icon: Lock, value: 'availability' },
-  { name: 'Learn', icon: BookOpen, value: 'learn' },
   { name: 'Ministries', icon: Users, value: 'ministries', adminOnly: true },
   { name: 'Users', icon: Users, value: 'users', adminOnly: true },
   { name: 'Settings', icon: Settings, value: 'settings' },
@@ -41,12 +39,10 @@ export function ResponsiveNav({ activeTab, onTabChange, userRole, className, onI
             key={item.value}
             onClick={(e) => {
               e.preventDefault();
-              if (item.value !== 'availability') {
-                onTabChange(item.value);
-                if (onItemClick) {
-                  // Close the mobile menu with a slight delay for better UX
-                  setTimeout(() => onItemClick(), 100);
-                }
+              onTabChange(item.value);
+              if (onItemClick) {
+                // Close the mobile menu with a slight delay for better UX
+                setTimeout(() => onItemClick(), 100);
               }
             }}
             className={cn(
@@ -55,11 +51,7 @@ export function ResponsiveNav({ activeTab, onTabChange, userRole, className, onI
               'hover:bg-accent hover:text-accent-foreground',
               'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-card',
               activeTab === item.value
-                ? item.value === 'availability' 
-                  ? 'bg-accent/50 text-muted-foreground cursor-not-allowed' 
-                  : 'bg-accent text-accent-foreground'
-                : item.value === 'availability'
-                ? 'text-muted-foreground/50 cursor-not-allowed hover:bg-transparent hover:text-muted-foreground/50'
+                ? 'bg-accent text-accent-foreground'
                 : 'text-muted-foreground hover:text-accent-foreground',
             )}
           >

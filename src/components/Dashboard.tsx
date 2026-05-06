@@ -7,9 +7,7 @@ import PlaylistManager from './PlaylistManager'
 import MinistryManager from './MinistryManager'
 import UserManager from './UserManager'
 import ProfileSettings from './ProfileSettings'
-import { Availability } from './Availability'
 import { DashboardView } from './DashboardView'
-import LearnModule from './LearnModule'
 import { Button } from './ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ProfileDropdown } from './layout/ProfileDropdown';
@@ -58,7 +56,7 @@ interface Ministry {
 export default function Dashboard({ user, onLogout, onUserUpdate }: DashboardProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<'songs' | 'playlists' | 'ministries' | 'users' | 'settings' | 'home' | 'availability' | 'learn'>(() => {
+  const [activeTab, setActiveTab] = useState<'songs' | 'playlists' | 'ministries' | 'users' | 'settings' | 'home'>(() => {
 
     // Load active tab from localStorage, default to 'home'
     try {
@@ -198,8 +196,6 @@ export default function Dashboard({ user, onLogout, onUserUpdate }: DashboardPro
     const commonProps = { user, ministryId: selectedMinistryId };
     
     switch (activeTab) {
-      case 'learn':
-        return <LearnModule />
       case 'home':
         return <DashboardView {...commonProps} />
       case 'songs':
@@ -213,8 +209,6 @@ export default function Dashboard({ user, onLogout, onUserUpdate }: DashboardPro
         return (user.role === 'main_admin' || user.role === 'sub_admin') 
           ? <UserManager {...commonProps} ministryId={selectedMinistryId} /> 
           : null
-      case 'availability':
-        return <Availability {...commonProps} />
       case 'settings':
         return (
           <ProfileSettings 

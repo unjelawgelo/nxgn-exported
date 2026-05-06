@@ -13,47 +13,19 @@ class OfflineDetector {
     isOffline: !navigator.onLine,
     lastOnlineTime: navigator.onLine ? Date.now() : null
   }
-  private checkInterval: NodeJS.Timeout | null = null
 
   constructor() {
     if (typeof window !== 'undefined') {
+      // Only use browser events - completely instant and reliable
       window.addEventListener('online', this.handleOnline)
       window.addEventListener('offline', this.handleOffline)
       
-      // Add periodic network check for more reliable detection
-      this.startNetworkCheck()
-    }
-  }
-
-  private startNetworkCheck = () => {
-    // Check network status every 5 seconds
-    this.checkInterval = setInterval(async () => {
-      const isActuallyOnline = await this.checkRealConnectivity()
-      const wasOnline = this.currentStatus.isOnline
-      
-      if (isActuallyOnline !== wasOnline) {
-        if (isActuallyOnline) {
-          this.handleOnline()
-        } else {
-          this.handleOffline()
-        }
+      // Set initial status immediately based on browser
+      this.currentStatus = {
+        isOnline: navigator.onLine,
+        isOffline: !navigator.onLine,
+        lastOnlineTime: navigator.onLine ? Date.now() : null
       }
-    }, 5000)
-  }
-
-  private checkRealConnectivity = async (): Promise<boolean> => {
-    try {
-      // Try to fetch a small resource to check real connectivity
-      const response = await fetch('https://httpbin.org/json', {
-        method: 'HEAD',
-        mode: 'no-cors',
-        cache: 'no-cache',
-        signal: AbortSignal.timeout(3000)
-      })
-      return true
-    } catch {
-      // If fetch fails, check navigator.onLine as fallback
-      return navigator.onLine
     }
   }
 
@@ -96,10 +68,6 @@ class OfflineDetector {
     if (typeof window !== 'undefined') {
       window.removeEventListener('online', this.handleOnline)
       window.removeEventListener('offline', this.handleOffline)
-    }
-    if (this.checkInterval) {
-      clearInterval(this.checkInterval)
-      this.checkInterval = null
     }
     this.listeners.clear()
   }

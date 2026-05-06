@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
 import { User } from '../App';
-import { api } from '../lib/api';
+import { blink } from '../blink/client';
 import { Users, Shield, FileText, BarChart2, Settings, AlertCircle, ListMusic } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { DashboardSkeleton } from './ui/dashboard-skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { useOfflineStatus } from '../utils/offlineDetector';
+import { offlineCache } from '../utils/offlineCache';
+import { OfflineIndicator } from './ui/offline-indicator';
 
 interface AdminStats {
   totalUsers: number;
@@ -29,17 +32,29 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { isOnline, isOffline } = useOfflineStatus();
 
   useEffect(() => {
     const fetchAdminStats = async () => {
       try {
         setIsLoading(true);
         
+        // Try to get cached data first if offline
+        if (isOffline) {
+          const cachedStats = offlineCache.get<AdminStats>('admin_dashboard_stats');
+          if (cachedStats) {
+            setStats(cachedStats);
+            setError(null);
+            setIsLoading(false);
+            return;
+          }
+        }
+        
         // First, get all ministries to be able to fetch their data
-        const ministries = await api.get('/ministries').catch(() => []);
+        const ministries = await blink.db.ministries.list().catch(() => []);
         
         // Get all users
-        const users = await api.get('/users').catch(() => []);
+        const users = await blink.db.users.list().catch(() => []);
         
         // Get songs and playlists for each ministry and sum them up
         let totalSongs = 0;
@@ -48,12 +63,12 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
         if (ministries.length > 0) {
           // Get songs for each ministry
           const songPromises = ministries.map((ministry: any) => 
-            api.get(`/songs?ministryId=${ministry.id}`).catch(() => [])
+            blink.db.songs.list({ where: { ministryId: ministry.id } }).catch(() => [])
           );
           
           // Get playlists for each ministry
           const playlistPromises = ministries.map((ministry: any) =>
-            api.get(`/playlists?ministryId=${ministry.id}`).catch(() => [])
+            blink.db.playlists.list({ where: { ministryId: ministry.id } }).catch(() => [])
           );
           
           // Wait for all API calls to complete
@@ -67,16 +82,34 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
           totalPlaylists = allPlaylists.reduce((sum, playlists) => sum + (playlists?.length || 0), 0);
         }
 
-        setStats({
+        const newStats: AdminStats = {
           totalUsers: users?.length || 0,
           totalMinistries: ministries?.length || 0,
           totalSongs,
           totalArrangements: totalPlaylists,
           systemStatus: 'operational'
-        });
+        };
+
+        setStats(newStats);
+        
+        // Cache the stats for offline use
+        offlineCache.set('admin_dashboard_stats', newStats);
+        
       } catch (err) {
         console.error('Failed to fetch admin stats:', err);
-        setError('Some data may not be up to date. The system is still functional.');
+        
+        // Try to use cached data as fallback
+        const cachedStats = offlineCache.get<AdminStats>('admin_dashboard_stats');
+        
+        if (cachedStats) {
+          setStats(cachedStats);
+          setError(isOffline ? null : 'Using cached data. Network connection unavailable.');
+        } else {
+          setError(isOffline 
+            ? 'No cached data available. Please connect to the internet to load admin statistics.'
+            : 'Some data may not be up to date. The system is still functional.'
+          );
+        }
       } finally {
         setIsLoading(false);
       }
@@ -85,7 +118,7 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
     if (user?.role === 'main_admin') {
       fetchAdminStats();
     }
-  }, [user]);
+  }, [user, isOnline, isOffline]);
 
   if (isLoading) {
     return <DashboardSkeleton />;
@@ -98,6 +131,7 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
         <p className="text-sm md:text-base text-muted-foreground">
           Overview of system-wide metrics and administration
         </p>
+        <OfflineIndicator />
       </div>
 
       {error && (

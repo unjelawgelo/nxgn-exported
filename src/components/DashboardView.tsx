@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { User } from '../App';
-import { api } from '../lib/api';
+import { blink } from '../blink/client';
 import { Church, Users, Music, ListMusic } from 'lucide-react';
 import { StatsCard } from './ui/StatsCard';
 import { DashboardSkeleton } from './ui/dashboard-skeleton';
 import { AdminDashboard } from './AdminDashboard';
+import { useOfflineStatus } from '../utils/offlineDetector';
+import { offlineCache } from '../utils/offlineCache';
+import { OfflineIndicator } from './ui/offline-indicator';
 
 interface DashboardStats {
   totalMinistries: number;
@@ -23,9 +26,11 @@ export function DashboardView({ user, ministryId }: DashboardViewProps) {
   if (user.role === 'main_admin') {
     return <AdminDashboard user={user} />;
   }
+  
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { isOnline, isOffline } = useOfflineStatus();
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -48,43 +53,79 @@ export function DashboardView({ user, ministryId }: DashboardViewProps) {
         const isMainAdmin = user.role === 'main_admin';
         const currentMinistryId = isMainAdmin ? undefined : (ministryId || user.ministryId);
         
-        // Fetch all statistics in parallel
+        // Try to get cached data first if offline
+        if (isOffline) {
+          const cacheKey = `dashboard_stats_${isMainAdmin ? 'all' : currentMinistryId}`;
+          const cachedStats = offlineCache.get<DashboardStats>(cacheKey);
+          if (cachedStats) {
+            setStats(cachedStats);
+            setError(null);
+            setIsLoading(false);
+            return;
+          }
+        }
+        
+        // Fetch all statistics in parallel using blink client
         const [ministries, members, songs, playlists] = await Promise.all([
           // Always get all ministries to show total count
-          api.get('/ministries'),
+          blink.db.ministries.list(),
             
           // Members - all for main admin, filtered by ministry for others
           isMainAdmin 
-            ? api.get('/users')
-            : api.get(`/users?ministryId=${currentMinistryId}`),
+            ? blink.db.users.list()
+            : blink.db.users.list({ where: { ministryId: currentMinistryId } }),
           
           // Songs - all for main admin, filtered by ministry for others
           isMainAdmin
-            ? api.get('/songs')
-            : api.get(`/songs?ministryId=${currentMinistryId}`),
+            ? blink.db.songs.list()
+            : blink.db.songs.list({ where: { ministryId: currentMinistryId } }),
           
           // Playlists - all for main admin, filtered by ministry for others
           isMainAdmin
-            ? api.get('/playlists')
-            : api.get(`/playlists?ministryId=${currentMinistryId}`),
+            ? blink.db.playlists.list()
+            : blink.db.playlists.list({ where: { ministryId: currentMinistryId } }),
         ]);
 
-        setStats({
+        const newStats = {
           totalMinistries: ministries?.length || 0,
           totalMembers: members?.length || 0,
           totalSongs: songs?.length || 0,
           totalPlaylists: playlists?.length || 0,
-        });
+        };
+
+        setStats(newStats);
+        
+        // Cache the stats for offline use
+        const cacheKey = `dashboard_stats_${isMainAdmin ? 'all' : currentMinistryId}`;
+        offlineCache.set(cacheKey, newStats);
+        
       } catch (err) {
         console.error('Failed to fetch dashboard stats:', err);
-        setError('Failed to load dashboard statistics. Please try again later.');
+        
+        // Recalculate variables for catch block
+        const isMainAdmin = user.role === 'main_admin';
+        const currentMinistryId = isMainAdmin ? undefined : (ministryId || user.ministryId);
+        
+        // Try to use cached data as fallback
+        const cacheKey = `dashboard_stats_${isMainAdmin ? 'all' : currentMinistryId}`;
+        const cachedStats = offlineCache.get<DashboardStats>(cacheKey);
+        
+        if (cachedStats) {
+          setStats(cachedStats);
+          setError(isOffline ? null : 'Using cached data. Network connection unavailable.');
+        } else {
+          setError(isOffline 
+            ? 'No cached data available. Please connect to the internet to load dashboard statistics.'
+            : 'Failed to load dashboard statistics. Please try again later.'
+          );
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchStats();
-  }, []);
+  }, [user, ministryId, isOnline, isOffline]);
 
   if (isLoading) {
     return <DashboardSkeleton />;
@@ -105,6 +146,7 @@ export function DashboardView({ user, ministryId }: DashboardViewProps) {
         <p className="text-sm text-muted-foreground">
           Overview of your ministry's data and activities
         </p>
+        <OfflineIndicator />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

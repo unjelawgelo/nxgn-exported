@@ -1,4 +1,7 @@
 import { api } from '../lib/api';
+import { offlineDetector } from '../utils/offlineDetector';
+import { offlineCache } from '../utils/offlineCache';
+import { offlineSync } from '../utils/offlineSync';
 
 // Minimal Blink client compatibility shim that proxies to our REST API
 // Supports the subset used by the app: list/create/update/delete with simple where filters
@@ -8,27 +11,107 @@ type ListOpts = { where?: Where; orderBy?: Record<string, 'asc' | 'desc'>; limit
 
 async function users_list(opts?: ListOpts) {
   const where = opts?.where || {};
-  if (where.pincode) {
-    const user = await api.get(`/users/by-pincode/${encodeURIComponent(where.pincode)}`);
-    return user ? [user] : [];
+  const queryKey = JSON.stringify(where);
+  
+  try {
+    if (offlineDetector.getStatus().isOffline) {
+      // Return cached data when offline
+      const cachedData = offlineCache.get<any[]>('users', queryKey);
+      if (cachedData) {
+        return cachedData;
+      }
+      throw new Error('No cached data available');
+    }
+
+    let result;
+    if (where.pincode) {
+      const user = await api.get(`/users/by-pincode/${encodeURIComponent(where.pincode)}`);
+      result = user ? [user] : [];
+    } else if (where.id) {
+      const user = await api.get(`/users/${encodeURIComponent(where.id)}`);
+      result = user ? [user] : [];
+    } else if (where.ministryId) {
+      result = await api.get(`/users?ministryId=${encodeURIComponent(where.ministryId)}`);
+    } else {
+      result = await api.get(`/users`);
+    }
+
+    // Cache the result for offline use
+    offlineCache.set('users', result, queryKey);
+    return result;
+  } catch (error) {
+    // Fallback to cached data if API call fails
+    const cachedData = offlineCache.get<any[]>('users', queryKey);
+    if (cachedData) {
+      console.warn('Using cached data due to network error:', error);
+      return cachedData;
+    }
+    throw error;
   }
-  if (where.id) {
-    const user = await api.get(`/users/${encodeURIComponent(where.id)}`);
-    return user ? [user] : [];
-  }
-  if (where.ministryId) {
-    return await api.get(`/users?ministryId=${encodeURIComponent(where.ministryId)}`);
-  }
-  return await api.get(`/users`);
 }
 
 async function users_create(row: any) {
-  // server generates id/timestamps
-  return await api.post('/users', row);
+  try {
+    if (offlineDetector.getStatus().isOffline) {
+      // Queue operation for sync when online
+      offlineSync.addOperation({
+        type: 'create',
+        entityType: 'users',
+        data: row
+      });
+      // Return a temporary object with generated ID
+      return { ...row, id: `temp_${Date.now()}`, _offline: true };
+    }
+    
+    const result = await api.post('/users', row);
+    
+    // Clear related cache after successful creation
+    offlineCache.remove('users');
+    
+    return result;
+  } catch (error) {
+    // If online but API fails, queue for retry
+    if (!offlineDetector.getStatus().isOffline) {
+      offlineSync.addOperation({
+        type: 'create',
+        entityType: 'users',
+        data: row
+      });
+    }
+    throw error;
+  }
 }
 
 async function users_update(id: string, patch: any) {
-  return await api.patch(`/users/${encodeURIComponent(id)}`, patch);
+  try {
+    if (offlineDetector.getStatus().isOffline) {
+      // Queue operation for sync when online
+      offlineSync.addOperation({
+        type: 'update',
+        entityType: 'users',
+        data: { id, ...patch }
+      });
+      // Return the patch as if successful
+      return { id, ...patch, _offline: true };
+    }
+    
+    const result = await api.patch(`/users/${encodeURIComponent(id)}`, patch);
+    
+    // Clear related cache after successful update
+    offlineCache.remove('users');
+    
+    return result;
+  } catch (error) {
+    // If online but API fails, queue for retry
+    if (!offlineDetector.getStatus().isOffline) {
+      offlineSync.addOperation({
+        type: 'update',
+        entityType: 'users',
+        data: { id, ...patch }
+      });
+    }
+    throw error;
+  }
 }
 
 async function users_delete(id: string) {
@@ -38,15 +121,38 @@ async function users_delete(id: string) {
 
 async function ministries_list(opts?: ListOpts) {
   const where = opts?.where || {};
-  if (where.passcode) {
-    const m = await api.get(`/ministries/by-passcode/${encodeURIComponent(where.passcode)}`);
-    return m ? [m] : [];
+  const queryKey = JSON.stringify(where);
+  
+  try {
+    if (offlineDetector.getStatus().isOffline) {
+      const cachedData = offlineCache.get<any[]>('ministries', queryKey);
+      if (cachedData) {
+        return cachedData;
+      }
+      throw new Error('No cached data available');
+    }
+
+    let result;
+    if (where.passcode) {
+      const m = await api.get(`/ministries/by-passcode/${encodeURIComponent(where.passcode)}`);
+      result = m ? [m] : [];
+    } else if (where.id) {
+      const m = await api.get(`/ministries/${encodeURIComponent(where.id)}`);
+      result = m ? [m] : [];
+    } else {
+      result = await api.get('/ministries');
+    }
+
+    offlineCache.set('ministries', result, queryKey);
+    return result;
+  } catch (error) {
+    const cachedData = offlineCache.get<any[]>('ministries', queryKey);
+    if (cachedData) {
+      console.warn('Using cached ministries data due to network error:', error);
+      return cachedData;
+    }
+    throw error;
   }
-  if (where.id) {
-    const m = await api.get(`/ministries/${encodeURIComponent(where.id)}`);
-    return m ? [m] : [];
-  }
-  return await api.get('/ministries');
 }
 
 async function ministries_create(row: any) {
@@ -63,10 +169,32 @@ async function ministries_delete(id: string) {
 
 async function songs_list(opts?: ListOpts) {
   const where = opts?.where || {};
-  const params = new URLSearchParams();
-  if (where.ministryId) params.set('ministryId', where.ministryId);
-  if (where.category) params.set('category', where.category);
-  return await api.get(`/songs?${params.toString()}`);
+  const queryKey = JSON.stringify(where);
+  
+  try {
+    if (offlineDetector.getStatus().isOffline) {
+      const cachedData = offlineCache.get<any[]>('songs', queryKey);
+      if (cachedData) {
+        return cachedData;
+      }
+      throw new Error('No cached data available');
+    }
+
+    const params = new URLSearchParams();
+    if (where.ministryId) params.set('ministryId', where.ministryId);
+    if (where.category) params.set('category', where.category);
+    const result = await api.get(`/songs?${params.toString()}`);
+    
+    offlineCache.set('songs', result, queryKey);
+    return result;
+  } catch (error) {
+    const cachedData = offlineCache.get<any[]>('songs', queryKey);
+    if (cachedData) {
+      console.warn('Using cached songs data due to network error:', error);
+      return cachedData;
+    }
+    throw error;
+  }
 }
 
 async function songs_create(row: any) {
@@ -83,11 +211,34 @@ async function songs_delete(id: string) {
 
 async function playlists_list(opts?: ListOpts) {
   const where = opts?.where || {};
-  if (where.ministryId) {
-    return await api.get(`/playlists?ministryId=${encodeURIComponent(where.ministryId)}`);
+  const queryKey = JSON.stringify(where);
+  
+  try {
+    if (offlineDetector.getStatus().isOffline) {
+      const cachedData = offlineCache.get<any[]>('playlists', queryKey);
+      if (cachedData) {
+        return cachedData;
+      }
+      throw new Error('No cached data available');
+    }
+
+    let result;
+    if (where.ministryId) {
+      result = await api.get(`/playlists?ministryId=${encodeURIComponent(where.ministryId)}`);
+    } else {
+      result = [];
+    }
+    
+    offlineCache.set('playlists', result, queryKey);
+    return result;
+  } catch (error) {
+    const cachedData = offlineCache.get<any[]>('playlists', queryKey);
+    if (cachedData) {
+      console.warn('Using cached playlists data due to network error:', error);
+      return cachedData;
+    }
+    throw error;
   }
-  // no generic list route used elsewhere
-  return [];
 }
 
 async function playlists_create(row: any) {

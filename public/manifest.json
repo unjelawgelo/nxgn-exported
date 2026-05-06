@@ -1,0 +1,21 @@
+{
+  "name": "NXGN Ministry Platform",
+  "short_name": "NXGN",
+  "description": "Ministry management platform for songs, playlists, and worship services",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://firebasestorage.googleapis.com/v0/b/blink-451505.firebasestorage.app/o/user-uploads%2FhhSSa5W1LyWiXUx8UIqiDL2RCSI3%2FB5i0b5ZE_400x400__27201fe1.jpg?alt=media&token=8c412c5e-df3e-4ae6-90aa-f004d3e8f016",
+      "sizes": "400x400",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "lang": "en",
+  "dir": "ltr"
+}

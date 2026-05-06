@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline - NXGN Ministry Platform</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .container {
+      text-align: center;
+      max-width: 400px;
+      width: 100%;
+    }
+    
+    .logo {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 2rem;
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: bold;
+      box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.8; }
+    }
+    
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+    
+    .offline-badge {
+      background: #ef4444;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 1.5rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .offline-icon {
+      width: 16px;
+      height: 16px;
+      background: white;
+      border-radius: 50%;
+      position: relative;
+    }
+    
+    .offline-icon::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-45deg);
+      width: 10px;
+      height: 2px;
+      background: #ef4444;
+    }
+    
+    p {
+      color: #94a3b8;
+      line-height: 1.6;
+      margin-bottom: 2rem;
+    }
+    
+    .retry-btn {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 0.75rem 2rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 1rem;
+    }
+    
+    .retry-btn:hover {
+      background: #2563eb;
+      transform: translateY(-1px);
+    }
+    
+    .retry-btn:active {
+      transform: translateY(0);
+    }
+    
+    .info {
+      font-size: 0.875rem;
+      color: #64748b;
+      line-height: 1.5;
+    }
+    
+    .features {
+      margin-top: 2rem;
+      padding-top: 2rem;
+      border-top: 1px solid #334155;
+    }
+    
+    .feature {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+      font-size: 0.875rem;
+      color: #94a3b8;
+    }
+    
+    .check {
+      width: 16px;
+      height: 16px;
+      background: #10b981;
+      border-radius: 50%;
+      position: relative;
+    }
+    
+    .check::after {
+      content: '✓';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">NXGN</div>
+    
+    <h1>You're Offline</h1>
+    
+    <div class="offline-badge">
+      <div class="offline-icon"></div>
+      No Internet Connection
+    </div>
+    
+    <p>
+      Your cached data is still available. When you reconnect, we'll automatically sync any changes.
+    </p>
+    
+    <button class="retry-btn" onclick="window.location.reload()">
+      Try Again
+    </button>
+    
+    <div class="info">
+      Your last sync: <span id="lastSync">Loading...</span>
+    </div>
+    
+    <div class="features">
+      <div class="feature">
+        <div class="check"></div>
+        <span>Cached songs available</span>
+      </div>
+      <div class="feature">
+        <div class="check"></div>
+        <span>Playlists accessible</span>
+      </div>
+      <div class="feature">
+        <div class="check"></div>
+        <span>Settings preserved</span>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Show last sync time from localStorage
+    const lastSyncTime = localStorage.getItem('nxgn_offline_last_sync');
+    if (lastSyncTime) {
+      const date = new Date(parseInt(lastSyncTime));
+      document.getElementById('lastSync').textContent = date.toLocaleString();
+    } else {
+      document.getElementById('lastSync').textContent = 'Unknown';
+    }
+    
+    // Check for connection periodically and reload when back online
+    setInterval(async () => {
+      try {
+        const response = await fetch('/', { method: 'HEAD', cache: 'no-cache' });
+        if (response.ok) {
+          window.location.reload();
+        }
+      } catch (error) {
+        // Still offline, continue checking
+      }
+    }, 5000);
+  </script>
+</body>
+</html>

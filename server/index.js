@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { pool } from './pg.js';
+import { pool, query } from './pg.js';
 import usersRouter from './routes/users.js';
 import ministriesRouter from './routes/ministries.js';
 import songsRouter from './routes/songs.js';
@@ -132,10 +132,11 @@ app.use((req, res, next) => {
 
 app.get('/health', async (_req, res) => {
   try {
-    const result = await pool.query('select 1 as ok');
+    const result = await query('select 1 as ok');
     res.json({ ok: true, db: result.rows[0].ok === 1 });
   } catch (e) {
-    res.status(500).json({ ok: false, error: e.message });
+    console.error('Health check failed:', e);
+    res.status(500).json({ ok: false, error: e.message || 'Unknown error' });
   }
 });
 

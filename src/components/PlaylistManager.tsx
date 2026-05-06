@@ -1052,54 +1052,41 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
         )}
             
         {showAddSongsDialog && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => { setShowAddSongsDialog(false); setSelectedSongsForAdd([]); }}>
-            <div className="bg-card rounded-lg w-full max-w-2xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-              <div className="p-6 border-b border-border">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-0 z-50" onClick={() => { setShowAddSongsDialog(false); setSelectedSongsForAdd([]); }}>
+            <div className="bg-card w-full h-full max-h-screen flex flex-col" onClick={(e) => e.stopPropagation()}>
+              <div className="p-4 border-b border-border">
                 <h3 className="text-lg font-semibold text-foreground">
                   {playlistSongs.length > 0 ? 'Edit Setlist Songs' : 'Add Songs to Setlist'}
                 </h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {playlistSongs.length > 0 
-                    ? 'Add new songs or remove existing ones from your setlist' 
-                    : 'Select multiple songs and arrange their order'}
-                </p>
               </div>
           
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex-1 overflow-y-auto p-4">
                 {/* Current Setlist Songs (Edit Mode) */}
                 {playlistSongs.length > 0 && (
-                  <div className="mb-6">
-                    <h4 className="font-medium text-foreground mb-3">Current Setlist ({playlistSongs.length} songs)</h4>
-                    <p className="text-sm text-muted-foreground mb-4">Click to remove songs from setlist</p>
-                    <div className="grid grid-cols-1 gap-3 max-h-40 overflow-y-auto">
+                  <div className="mb-4">
+                    <h4 className="font-medium text-foreground mb-2">Current Setlist ({playlistSongs.length} songs)</h4>
+                    <p className="text-sm text-muted-foreground mb-2">Click to remove songs from setlist</p>
+                    <div className="space-y-1 max-h-48 overflow-y-auto">
                       {playlistSongs.map((playlistSong, index) => (
                         <div
                           key={playlistSong.id}
                           onClick={() => deletingIds.includes(playlistSong.id) ? undefined : handleRemoveSongFromPlaylist(playlistSong.id)}
-                          className="relative p-4 border-2 border-destructive/20 bg-destructive/5 rounded-xl transition-all cursor-pointer transform hover:scale-[1.02] hover:border-destructive/40 hover:bg-destructive/10"
+                          className="relative p-2 border border-destructive/20 bg-destructive/5 rounded transition-all cursor-pointer hover:border-destructive/40 hover:bg-destructive/10"
                         >
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <h5 className="font-semibold text-foreground mb-1">{playlistSong.song?.title}</h5>
-                              <div className="flex items-center gap-2">
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  playlistSong.song?.category === 'Worship' 
-                                    ? 'bg-blue-500/20 text-blue-400' 
-                                    : 'bg-orange-500/20 text-orange-400'
-                                }`}>
-                                  {playlistSong.song?.category}
-                                </span>
-                              </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-shrink-0 w-5 h-5 bg-primary/10 text-primary rounded-full flex items-center justify-center text-xs font-medium">
+                              {index + 1}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h5 className="font-medium text-foreground text-sm truncate">{playlistSong.song?.title}</h5>
                             </div>
                             
-                            <div className="ml-3 flex-shrink-0">
-                              <div className="w-6 h-6 bg-destructive/20 rounded-full flex items-center justify-center">
-                                {deletingIds.includes(playlistSong.id) ? (
-                                  <Loader2 className="w-4 h-4 animate-spin text-destructive" />
-                                ) : (
-                                  <Trash className="w-4 h-4 text-destructive" />
-                                )}
-                              </div>
+                            <div className="flex-shrink-0">
+                              {deletingIds.includes(playlistSong.id) ? (
+                                <Loader2 className="w-3 h-3 animate-spin text-destructive" />
+                              ) : (
+                                <Trash className="w-3 h-3 text-destructive" />
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1109,57 +1096,70 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
                 )}
                 
                 {/* Available Songs */}
-                <div className="mb-6">
-                  <h4 className="font-medium text-foreground mb-3">Available Songs</h4>
-                  <p className="text-sm text-muted-foreground mb-4">Click on song cards to select multiple songs</p>
+                <div className="mb-3">
+                  <h4 className="font-medium text-foreground mb-1">Available Songs</h4>
+                  <p className="text-sm text-muted-foreground mb-1">Click on song cards to select multiple songs</p>
+                  
+                  {/* Search Bar */}
+                  <div className="relative mb-3">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="Search songs..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    />
+                  </div>
+                  
                   {availableSongs.length === 0 ? (
                     <div className="text-center text-muted-foreground py-8">
                       <Music className="h-8 w-8 mx-auto mb-2" />
                       <p>No available songs</p>
                     </div>
+                  ) : availableSongs.filter(song => 
+                    song.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    song.category.toLowerCase().includes(searchQuery.toLowerCase())
+                  ).length === 0 ? (
+                    <div className="text-center text-muted-foreground py-8">
+                      <Search className="h-8 w-8 mx-auto mb-2" />
+                      <p>No songs found for "{searchQuery}"</p>
+                    </div>
                   ) : (
-                    <div className="grid grid-cols-1 gap-3 max-h-60 overflow-y-auto">
-                      {availableSongs.map((song) => {
+                    <div className="space-y-1 max-h-96 overflow-y-auto">
+                      {availableSongs
+                        .filter(song => 
+                          song.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          song.category.toLowerCase().includes(searchQuery.toLowerCase())
+                        )
+                        .map((song) => {
                         const isSelected = selectedSongsForAdd.some(s => s.songId === song.id)
                         return (
                           <div
                             key={song.id}
                             onClick={() => handleToggleSongSelection(song.id)}
-                            className={`relative p-4 border-2 rounded-xl transition-all cursor-pointer transform hover:scale-[1.02] ${
+                            className={`relative p-2 border rounded transition-all cursor-pointer hover:scale-[1.01] ${
                               isSelected 
-                                ? 'bg-primary/10 border-primary shadow-lg shadow-primary/20' 
+                                ? 'bg-primary/10 border-primary shadow-md' 
                                 : 'bg-card border-border hover:bg-muted/50 hover:border-primary/50'
                             }`}
                           >
-                            <div className="flex items-center justify-between">
-                              <div className="flex-1">
-                                <h5 className="font-semibold text-foreground mb-1">{song.title}</h5>
-                                <div className="flex items-center gap-2">
-                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                    song.category === 'Worship' 
-                                      ? 'bg-blue-500/20 text-blue-400' 
-                                      : 'bg-orange-500/20 text-orange-400'
-                                  }`}>
-                                    {song.category}
-                                  </span>
+                            <div className="flex items-center gap-2">
+                              <div className="flex-shrink-0">
+                                <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
+                                  isSelected 
+                                    ? 'bg-primary text-primary-foreground' 
+                                    : 'bg-muted text-muted-foreground'
+                                }`}>
+                                  {isSelected && (
+                                    <div className="w-1.5 h-1.5 bg-current rounded-full"></div>
+                                  )}
                                 </div>
                               </div>
-                              
-                              {isSelected && (
-                                <div className="ml-3 flex-shrink-0">
-                                  <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-                                    <svg className="w-4 h-4 text-primary-foreground" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                    </svg>
-                                  </div>
-                                </div>
-                              )}
+                              <div className="flex-1 min-w-0">
+                                <h5 className="font-medium text-foreground text-sm truncate">{song.title}</h5>
+                              </div>
                             </div>
-                            
-                            {/* Selection overlay effect */}
-                            <div className={`absolute inset-0 rounded-xl transition-opacity pointer-events-none ${
-                              isSelected ? 'bg-primary/5 opacity-100' : 'opacity-0'
-                            }`} />
                           </div>
                         )
                       })}

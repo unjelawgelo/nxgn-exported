@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { blink } from '../blink/client'
 import { User } from '../App'
 import { playlistDb } from '../lib/dbUtils'
-import { ListMusic, Plus, Music, Pencil, Trash, Search, RefreshCw, Loader2, MoreHorizontal } from 'lucide-react'
+import { ListMusic, Plus, Music, Pencil, Trash, Search, RefreshCw, Loader2, MoreHorizontal, List, FileText } from 'lucide-react'
 import { Button } from './ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import {
@@ -59,7 +59,7 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
   const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [contentFontSize, setContentFontSize] = useState(15)
-  const [displayMode, setDisplayMode] = useState<'both' | 'lyrics' | 'chords'>('both')
+  const [displayMode, setDisplayMode] = useState<'line-up' | 'lyrics' | 'chords'>('line-up')
   const [songKeys, setSongKeys] = useState<Record<string, string>>({})
   const [showChords, setShowChords] = useState<Record<string, boolean>>({})
   // UI states for async actions
@@ -693,7 +693,7 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
           {/* Display mode selector */}
           <div className="mt-4">
             <div className="inline-flex gap-2 bg-muted/20 p-0.5 rounded-md">
-              {(['both', 'chords', 'lyrics'] as const).map((m) => (
+              {(['line-up', 'lyrics', 'chords'] as const).map((m) => (
                 <button
                   key={m}
                   onClick={() => setDisplayMode(m)}
@@ -703,15 +703,15 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
                       : 'text-muted-foreground hover:bg-muted/50'
                   }`}
                 >
-                  {m === 'both' ? 'Both' : m === 'lyrics' ? 'Lyrics' : 'Chords'}
+                  {m === 'line-up' ? 'Line-ups' : m === 'lyrics' ? 'Lyrics' : 'Chords'}
                 </button>
               ))}
             </div>
           </div>
         </div>
         
-        {/* Sticky Song Navigation Tabs */}
-        {playlistSongs.length > 0 && (
+        {/* Sticky Song Navigation Tabs - Only show for lyrics/chords modes */}
+        {playlistSongs.length > 0 && displayMode !== 'line-up' && (
           <div className="sticky top-0 z-20 border-b border-border bg-card -mt-px">
             <div className="flex overflow-x-auto gap-1 p-2">
               {playlistSongs.map((playlistSong, index) => {
@@ -762,27 +762,58 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto pt-1">
-            <div className="space-y-0">
-              {playlistSongs.map((playlistSong, index) => {
-                const songId = `song-${playlistSong.id}`
-                
-                // Auto-update active tab when scrolling to this song
-                const observer = new IntersectionObserver((entries) => {
-                  entries.forEach((entry) => {
-                    if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
-                      setActiveSongTab(songId)
-                    }
-                  })
-                }, { threshold: 0.5 })
-                
-                return (
-                  <div key={`song-${playlistSong.id}`} 
-                    id={songId} 
-                    className="border-b border-border last:border-b-0"
-                    ref={(el) => {
-                      if (el) observer.observe(el)
-                    }}
-                  >
+            {displayMode === 'line-up' ? (
+              <div className="px-6 py-6 bg-background/50 min-h-[300px]">
+                <div className="space-y-4">
+                  <h4 className="font-medium text-foreground mb-4 flex items-center gap-2">
+                    <List className="h-4 w-4" />
+                    Setlist - {playlistSongs.length} song{playlistSongs.length !== 1 ? 's' : ''}
+                  </h4>
+                  <div className="space-y-3">
+                    {playlistSongs.map((song, index) => (
+                      <div key={song.id} className="flex items-center gap-4 p-4 bg-card border border-border rounded-lg">
+                        <div className="flex-shrink-0 w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center text-sm font-medium">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1">
+                          <h5 className="font-medium text-foreground">{song.song?.title || 'Unknown Song'}</h5>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              song.song?.category === 'Worship' 
+                                ? 'bg-blue-500/20 text-blue-400' 
+                                : 'bg-orange-500/20 text-orange-400'
+                            }`}>
+                              {song.song?.category || 'Unknown'}
+                            </span>
+                          </div>
+                        </div>
+                                              </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-0">
+                {playlistSongs.map((playlistSong, index) => {
+                  const songId = `song-${playlistSong.id}`
+                  
+                  // Auto-update active tab when scrolling to this song
+                  const observer = new IntersectionObserver((entries) => {
+                    entries.forEach((entry) => {
+                      if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+                        setActiveSongTab(songId)
+                      }
+                    })
+                  }, { threshold: 0.5 })
+                  
+                  return (
+                    <div key={`song-${playlistSong.id}`} 
+                      id={songId} 
+                      className="border-b border-border last:border-b-0"
+                      ref={(el) => {
+                        if (el) observer.observe(el)
+                      }}
+                    >
                     {/* Song Header */}
                     <div className="p-4 bg-card sticky top-0 z-10 border-b border-border/50">
                       <div className="flex items-center justify-between">
@@ -855,117 +886,168 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
                     </div>
                     
                     {/* Song Content */}
-                    <div className="px-6 py-6 bg-background/50 min-h-[300px]">
-                      {(displayMode === 'both' || displayMode === 'lyrics') && playlistSong.song?.lyrics && (
-                        <div className="mb-6">
-                          <h4 className="font-medium text-foreground mb-3 flex items-center gap-2">
-                            <Music className="h-4 w-4" />
-                            Lyrics
+                    {displayMode === 'line-up' ? (
+                      <div className="px-6 py-6 bg-background/50 min-h-[300px]">
+                        <div className="space-y-4">
+                          <h4 className="font-medium text-foreground mb-4 flex items-center gap-2">
+                            <List className="h-4 w-4" />
+                            Setlist - {playlistSongs.length} song{playlistSongs.length !== 1 ? 's' : ''}
                           </h4>
-                          <div className="bg-card border border-border rounded-lg p-4 shadow-sm">
-                            <div className="text-foreground whitespace-pre-wrap leading-relaxed" style={{ fontSize: `${contentFontSize}px` }}>
-                              {playlistSong.song.lyrics}
-                            </div>
+                          <div className="space-y-3">
+                            {playlistSongs.map((song, index) => (
+                              <div key={song.id} className="flex items-center gap-4 p-4 bg-card border border-border rounded-lg">
+                                <div className="flex-shrink-0 w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center text-sm font-medium">
+                                  {index + 1}
+                                </div>
+                                <div className="flex-1">
+                                  <h5 className="font-medium text-foreground">{song.song?.title || 'Unknown Song'}</h5>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                      song.song?.category === 'Worship' 
+                                        ? 'bg-blue-500/20 text-blue-400' 
+                                        : 'bg-orange-500/20 text-orange-400'
+                                    }`}>
+                                      {song.song?.category || 'Unknown'}
+                                    </span>
+                                    {song.song?.lyrics && (
+                                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                        <FileText className="h-3 w-3" />
+                                        Lyrics
+                                      </span>
+                                    )}
+                                    {song.song?.chords && (
+                                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                        <Music className="h-3 w-3" />
+                                        Chords
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex-shrink-0">
+                                  <button
+                                    onClick={() => setDisplayMode('lyrics')}
+                                    className="px-3 py-1 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                                  >
+                                    View
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
-                      )}
-                      
-                      {(displayMode === 'both' || displayMode === 'chords') && playlistSong.song?.chords && (
-                        <div className="mb-6" style={{ fontSize: '0.875rem' }}>
-                          <div className="mb-3">
-                            <div className="flex items-center justify-between mb-2">
-                              <h4 className="font-medium text-foreground flex items-center gap-2 text-base">
-                                <Music className="h-4 w-4" />
-                                <span>{shouldShowChords(playlistSong.song.id) ? `Chords in ${getSongKey(playlistSong.song.id)}` : 'Chords'}</span>
-                              </h4>
-                              <button
-                                onClick={() => toggleShowChords(playlistSong.song.id)}
-                                onMouseDown={e => e.preventDefault()}
-                                onFocus={e => e.target.blur()}
-                                className={`h-10 px-4 py-2 text-sm font-medium rounded-lg transition-all shadow-sm focus:outline-none focus:ring-0 focus:ring-offset-0 focus:ring-offset-transparent focus:ring-transparent focus:shadow-none select-none active:bg-transparent active:scale-100 ${
-                                  shouldShowChords(playlistSong.song.id)
-                                    ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90 border border-destructive/20 hover:border-destructive/50'
-                                    : 'bg-primary text-primary-foreground hover:bg-primary/90 border border-primary/20 hover:border-primary/50'
-                                }`}
-                              >
-                                {shouldShowChords(playlistSong.song.id) ? 'Back to Nashville' : 'Show Chords'}
-
-                              </button>
+                      </div>
+                    ) : (
+                      <div className="px-6 py-6 bg-background/50 min-h-[300px]">
+                        {displayMode === 'lyrics' && playlistSong.song?.lyrics && (
+                          <div className="mb-6">
+                            <h4 className="font-medium text-foreground mb-3 flex items-center gap-2">
+                              <Music className="h-4 w-4" />
+                              Lyrics
+                            </h4>
+                            <div className="bg-card border border-border rounded-lg p-4 shadow-sm">
+                              <div className="text-foreground whitespace-pre-wrap leading-relaxed" style={{ fontSize: `${contentFontSize}px` }}>
+                                {playlistSong.song.lyrics}
+                              </div>
                             </div>
-                            {shouldShowChords(playlistSong.song.id) && (
-                              <div className="mt-3 pt-3 border-t border-border">
-                                <div className="space-y-2">
-                                  <div className="text-sm text-muted-foreground">Select Key:</div>
-                                  <div className="w-full overflow-x-auto pb-1">
-                                    <div className="flex gap-1.5 w-max">
-                                      {['Ab', 'A', 'A#', 'Bb', 'B', 'C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F', 'F#', 'Gb', 'G', 'G#'].map(key => (
-                                        <button
-                                          key={key}
-                                          onClick={() => setSongKey(playlistSong.song.id, key)}
-                                          onMouseDown={e => e.preventDefault()}
-                                          onFocus={e => e.target.blur()}
-                                          className={`min-w-[34px] h-9 flex-shrink-0 flex items-center justify-center text-xs font-medium rounded border transition-all focus:outline-none focus:ring-0 focus:ring-offset-0 focus:ring-offset-transparent focus:ring-transparent focus:shadow-none select-none active:bg-transparent active:scale-100 ${
-                                            getSongKey(playlistSong.song.id) === key
-                                              ? 'bg-primary text-primary-foreground border-primary scale-105'
-                                              : 'bg-background hover:bg-accent hover:text-accent-foreground border-input'
-                                          }`}
-                                          title={`Key of ${key}`}
-                                        >
-                                          {key}
-                                        </button>
-                                      ))}
+                          </div>
+                        )}
+                        
+                        {displayMode === 'chords' && playlistSong.song?.chords && (
+                          <div className="mb-6" style={{ fontSize: '0.875rem' }}>
+                            <div className="mb-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="font-medium text-foreground flex items-center gap-2 text-base">
+                                  <Music className="h-4 w-4" />
+                                  <span>{shouldShowChords(playlistSong.song.id) ? `Chords in ${getSongKey(playlistSong.song.id)}` : 'Chords'}</span>
+                                </h4>
+                                <button
+                                  onClick={() => toggleShowChords(playlistSong.song.id)}
+                                  onMouseDown={e => e.preventDefault()}
+                                  onFocus={e => e.target.blur()}
+                                  className={`h-10 px-4 py-2 text-sm font-medium rounded-lg transition-all shadow-sm focus:outline-none focus:ring-0 focus:ring-offset-0 focus:ring-offset-transparent focus:ring-transparent focus:shadow-none select-none active:bg-transparent active:scale-100 ${
+                                    shouldShowChords(playlistSong.song.id)
+                                      ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90 border border-destructive/20 hover:border-destructive/50'
+                                      : 'bg-primary text-primary-foreground hover:bg-primary/90 border border-primary/20 hover:border-primary/50'
+                                  }`}
+                                >
+                                  {shouldShowChords(playlistSong.song.id) ? 'Back to Nashville' : 'Show Chords'}
+
+                                </button>
+                              </div>
+                              {shouldShowChords(playlistSong.song.id) && (
+                                <div className="mt-3 pt-3 border-t border-border">
+                                  <div className="space-y-2">
+                                    <div className="text-sm text-muted-foreground">Select Key:</div>
+                                    <div className="w-full overflow-x-auto pb-1">
+                                      <div className="flex gap-1.5 w-max">
+                                        {['Ab', 'A', 'A#', 'Bb', 'B', 'C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F', 'F#', 'Gb', 'G', 'G#'].map(key => (
+                                          <button
+                                            key={key}
+                                            onClick={() => setSongKey(playlistSong.song.id, key)}
+                                            onMouseDown={e => e.preventDefault()}
+                                            onFocus={e => e.target.blur()}
+                                            className={`min-w-[34px] h-9 flex-shrink-0 flex items-center justify-center text-xs font-medium rounded border transition-all focus:outline-none focus:ring-0 focus:ring-offset-0 focus:ring-offset-transparent focus:ring-transparent focus:shadow-none select-none active:bg-transparent active:scale-100 ${
+                                              getSongKey(playlistSong.song.id) === key
+                                                ? 'bg-primary text-primary-foreground border-primary scale-105'
+                                                : 'bg-background hover:bg-accent hover:text-accent-foreground border-input'
+                                            }`}
+                                            title={`Key of ${key}`}
+                                          >
+                                            {key}
+                                          </button>
+                                        ))}
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
-                              </div>
+                              )}
+                            </div>
+                            <div 
+                              className="whitespace-pre-wrap font-mono bg-muted/10 p-4 rounded-md"
+                              style={{ 
+                                fontSize: `${contentFontSize}px`,
+                                lineHeight: '1.5'
+                              }}
+                            >
+                              {shouldShowChords(playlistSong.song.id)
+                                ? convertNashvilleToChords(playlistSong.song.chords, getSongKey(playlistSong.song.id))
+                                : playlistSong.song.chords}
+                            </div>
+                            
+                            {/* Original Nashville Numbers (collapsible) - Only show when displaying chords */}
+                            {shouldShowChords(playlistSong.song.id) && (
+                              <details className="mt-3 text-sm">
+                                <summary className="text-muted-foreground cursor-pointer hover:text-foreground text-xs">
+                                  Show original Nashville numbers
+                                </summary>
+                                <div 
+                                  className="mt-2 p-2 bg-muted/5 rounded font-mono whitespace-pre-wrap"
+                                  style={{ fontSize: `${contentFontSize}px` }}
+                                >
+                                  {playlistSong.song.chords}
+                                </div>
+                              </details>
                             )}
                           </div>
-                          <div 
-                            className="whitespace-pre-wrap font-mono bg-muted/10 p-4 rounded-md"
-                            style={{ 
-                              fontSize: `${contentFontSize}px`,
-                              lineHeight: '1.5'
-                            }}
-                          >
-                            {shouldShowChords(playlistSong.song.id)
-                              ? convertNashvilleToChords(playlistSong.song.chords, getSongKey(playlistSong.song.id))
-                              : playlistSong.song.chords}
+                        )}
+                        
+                        {((displayMode === 'lyrics' && !playlistSong.song?.lyrics) || 
+                          (displayMode === 'chords' && !playlistSong.song?.chords)) && (
+                          <div className="text-center text-muted-foreground py-8">
+                            <Music className="h-8 w-8 mx-auto mb-3" />
+                            <p className="text-sm">
+                              {displayMode === 'lyrics' ? 'No lyrics available' : 
+                               'No chords available'}
+                            </p>
                           </div>
-                          
-                          {/* Original Nashville Numbers (collapsible) - Only show when displaying chords */}
-                          {shouldShowChords(playlistSong.song.id) && (
-                            <details className="mt-3 text-sm">
-                              <summary className="text-muted-foreground cursor-pointer hover:text-foreground text-xs">
-                                Show original Nashville numbers
-                              </summary>
-                              <div 
-                                className="mt-2 p-2 bg-muted/5 rounded font-mono whitespace-pre-wrap"
-                                style={{ fontSize: `${contentFontSize}px` }}
-                              >
-                                {playlistSong.song.chords}
-                              </div>
-                            </details>
-                          )}
-                        </div>
-                      )}
-                      
-                      {((displayMode === 'both' && !playlistSong.song?.lyrics && !playlistSong.song?.chords) || 
-                        (displayMode === 'lyrics' && !playlistSong.song?.lyrics) || 
-                        (displayMode === 'chords' && !playlistSong.song?.chords)) && (
-                        <div className="text-center text-muted-foreground py-8">
-                          <Music className="h-8 w-8 mx-auto mb-3" />
-                          <p className="text-sm">
-                            {displayMode === 'lyrics' ? 'No lyrics available' : 
-                             displayMode === 'chords' ? 'No chords available' : 
-                             'No lyrics or chords available for this song'}
-                          </p>
-                        </div>
-                      )}
-                    </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )
               })}
-            </div>
+              </div>
+            )}
           </div>
         )}
             

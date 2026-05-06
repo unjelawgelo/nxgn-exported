@@ -1,0 +1,103 @@
+/* Text selection and focus styles for better visibility */
+
+/* Global text selection styles */
+::selection {
+  background-color: #3b82f6 !important; /* Blue-500 */
+  color: white !important;
+  text-shadow: none !important;
+}
+
+/* Firefox selection */
+::-moz-selection {
+  background-color: #3b82f6 !important; /* Blue-500 */
+  color: white !important;
+  text-shadow: none !important;
+}
+
+/* Input field selection styles */
+input::selection,
+textarea::selection,
+[contenteditable]::selection {
+  background-color: #2563eb !important; /* Blue-600 */
+  color: white !important;
+}
+
+input::-moz-selection,
+textarea::-moz-selection,
+[contenteditable]::-moz-selection {
+  background-color: #2563eb !important; /* Blue-600 */
+  color: white !important;
+}
+
+/* Enhanced focus styles for better accessibility */
+*:focus {
+  outline: 2px solid #3b82f6 !important;
+  outline-offset: 2px !important;
+}
+
+/* Better focus for buttons and interactive elements */
+button:focus,
+input:focus,
+textarea:focus,
+select:focus,
+a:focus {
+  outline: 2px solid #3b82f6 !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* Remove default focus when using mouse, keep for keyboard */
+button:focus:not(:focus-visible),
+input:focus:not(:focus-visible),
+textarea:focus:not(:focus-visible),
+select:focus:not(:focus-visible),
+a:focus:not(:focus-visible) {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Ensure text selection is visible in all components */
+* {
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  user-select: text !important;
+}
+
+/* Allow specific elements to disable selection if needed */
+.no-select {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+}
+
+/* Highlight for code blocks and pre elements */
+pre::selection,
+code::selection {
+  background-color: #1e40af !important; /* Blue-800 */
+  color: white !important;
+}
+
+pre::-moz-selection,
+code::-moz-selection {
+  background-color: #1e40af !important; /* Blue-800 */
+  color: white !important;
+}
+
+/* Ensure selection works in dark mode contexts */
+.dark ::selection {
+  background-color: #60a5fa !important; /* Blue-400 */
+  color: #1e293b !important; /* Slate-800 */
+}
+
+.dark ::-moz-selection {
+  background-color: #60a5fa !important; /* Blue-400 */
+  color: #1e293b !important; /* Slate-800 */
+}
+
+/* Fix for any potential override styles */
+[data-selected="true"] {
+  background-color: #3b82f6 !important;
+  color: white !important;
+}

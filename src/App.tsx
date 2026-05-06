@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import AuthScreen from './components/AuthScreen'
 import Dashboard from './components/Dashboard'
 import './App.css'
+import './styles/selection.css'
 import { NotificationProvider } from './hooks/NotificationProvider'
 import { ConfirmProvider } from './hooks/ConfirmProvider'
 

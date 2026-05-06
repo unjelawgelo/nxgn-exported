@@ -693,7 +693,7 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
           {/* Display mode selector */}
           <div className="mt-4">
             <div className="inline-flex gap-2 bg-muted/20 p-0.5 rounded-md">
-              {(['line-up', 'lyrics', 'chords'] as const).map((m) => (
+              {(['line-up', 'chords', 'lyrics'] as const).map((m) => (
                 <button
                   key={m}
                   onClick={() => setDisplayMode(m)}

@@ -2,22 +2,7 @@ const CACHE_NAME = 'nxgen-v1';
 const STATIC_CACHE = [
   '/',
   '/index.html',
-  '/src/main.tsx',
-  '/src/App.tsx',
-  '/src/components/Dashboard.tsx',
-  '/src/components/DashboardView.tsx',
-  '/src/components/PlaylistManager.tsx',
-  '/src/components/SongLibrary.tsx',
-  '/src/components/MinistryManager.tsx',
-  '/src/components/UserManager.tsx',
-  '/src/components/ProfileSettings.tsx',
-  '/src/components/ui/offline-indicator.tsx',
-  '/src/utils/offlineDetector.ts',
-  '/src/utils/offlineCache.ts',
-  '/src/utils/offlineSync.ts',
-  '/src/blink/client.ts',
-  '/src/lib/api.ts',
-  '/src/styles/selection.css',
+  '/offline.html',
   'https://firebasestorage.googleapis.com/v0/b/blink-451505.firebasestorage.app/o/user-uploads%2FhhSSa5W1LyWiXUx8UIqiDL2RCSI3%2FB5i0b5ZE_400x400__27201fe1.jpg?alt=media&token=8c412c5e-df3e-4ae6-90aa-f004d3e8f016'
 ];
 
@@ -61,9 +46,12 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
 
   // Skip non-GET requests and external API calls
-  if (request.method !== 'GET' || 
-      url.origin !== self.location.origin ||
-      url.pathname.startsWith('/api/')) {
+  if (request.method !== 'GET') {
+    return;
+  }
+
+  // For API calls, don't intercept - let them fail naturally
+  if (url.pathname.startsWith('/api/')) {
     return;
   }
 
@@ -75,30 +63,46 @@ self.addEventListener('fetch', (event) => {
           return cachedResponse;
         }
 
-        // Otherwise fetch from network and cache
-        return fetch(request)
-          .then((response) => {
-            // Don't cache non-successful responses
-            if (!response || response.status !== 200 || response.type !== 'basic') {
+        // For same-origin requests, try network first, then cache
+        if (url.origin === self.location.origin) {
+          return fetch(request)
+            .then((response) => {
+              // Only cache successful responses to static assets
+              if (response.ok && 
+                  (request.url.includes('.js') || 
+                   request.url.includes('.css') || 
+                   request.url.includes('.svg') ||
+                   request.url.includes('.png') ||
+                   request.url.includes('.jpg') ||
+                   request.url.includes('.ico'))) {
+                
+                const responseToCache = response.clone();
+                caches.open(CACHE_NAME)
+                  .then((cache) => {
+                    cache.put(request, responseToCache);
+                  });
+              }
               return response;
-            }
+            })
+            .catch(() => {
+              // If network fails for HTML requests, serve offline page
+              if (request.headers.get('accept')?.includes('text/html')) {
+                return caches.match('/offline.html');
+              }
+              // For other assets, return error
+              return new Response('Offline', { status: 503 });
+            });
+        }
 
-            // Clone the response since it can only be used once
-            const responseToCache = response.clone();
-
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(request, responseToCache);
-              });
-
-            return response;
-          })
-          .catch(() => {
-            // If both cache and network fail, serve offline page for HTML requests
-            if (request.headers.get('accept')?.includes('text/html')) {
-              return caches.match('/index.html');
-            }
-          });
+        // For external resources (like images), try network
+        return fetch(request);
+      })
+      .catch(() => {
+        // Final fallback for HTML requests
+        if (request.headers.get('accept')?.includes('text/html')) {
+          return caches.match('/offline.html');
+        }
+        return new Response('Offline', { status: 503 });
       })
   );
 });

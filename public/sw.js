@@ -1,92 +1,110 @@
-// Minimal service worker for PWA - doesn't interfere with app loading
-const CACHE_NAME = 'nxgen-v3';
+const CACHE_NAME = 'nxgen-v1';
+const STATIC_CACHE = [
+  '/',
+  '/index.html',
+  '/offline.html',
+  'https://firebasestorage.googleapis.com/v0/b/blink-451505.firebasestorage.app/o/user-uploads%2FhhSSa5W1LyWiXUx8UIqiDL2RCSI3%2FB5i0b5ZE_400x400__27201fe1.jpg?alt=media&token=8c412c5e-df3e-4ae6-90aa-f004d3e8f016'
+];
 
-// Install event - just activate immediately
+// Install event - cache static assets
 self.addEventListener('install', (event) => {
-  console.log('SW installed');
-  self.skipWaiting();
+  console.log('Service Worker: Installing...');
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => {
+        console.log('Service Worker: Caching static assets');
+        return cache.addAll(STATIC_CACHE);
+      })
+      .then(() => {
+        console.log('Service Worker: Installation complete');
+        return self.skipWaiting();
+      })
+  );
 });
 
-// Activate event - take control immediately
+// Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('SW activated');
-  self.clients.claim();
+  console.log('Service Worker: Activating...');
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            console.log('Service Worker: Clearing old cache');
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+  return self.clients.claim();
 });
 
-// Fetch event - only handle offline HTML fallback
+// Fetch event - serve from cache when offline
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  
-  // Only intercept HTML requests when offline
-  if (request.headers.get('accept')?.includes('text/html')) {
-    event.respondWith(
-      fetch(request).catch(() => {
-        // Network failed - serve cached version or offline page
-        return caches.match(request).then((cachedResponse) => {
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          
-          // Return a simple offline page
-          return new Response(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <title>Offline - NXGN</title>
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <style>
-                body { 
-                  font-family: system-ui; 
-                  text-align: center; 
-                  padding: 2rem;
-                  background: #0f172a;
-                  color: #e2e8f0;
-                  min-height: 100vh;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  flex-direction: column;
-                }
-                .logo { 
-                  font-size: 3rem; 
-                  font-weight: bold; 
-                  background: #3b82f6;
-                  color: white;
-                  width: 80px;
-                  height: 80px;
-                  border-radius: 20px;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  margin-bottom: 2rem;
-                }
-                button {
-                  background: #3b82f6;
-                  color: white;
-                  border: none;
-                  padding: 0.75rem 2rem;
-                  border-radius: 8px;
-                  margin-top: 1rem;
-                  cursor: pointer;
-                  font-size: 1rem;
-                }
-              </style>
-            </head>
-            <body>
-              <div class="logo">NXGN</div>
-              <h1>You're Offline</h1>
-              <p>Check your internet connection and try again.</p>
-              <button onclick="window.location.reload()">Reload App</button>
-            </body>
-            </html>
-          `, {
-            headers: { 'Content-Type': 'text/html' }
-          });
-        });
-      })
-    );
+  const url = new URL(request.url);
+
+  // Skip non-GET requests and external API calls
+  if (request.method !== 'GET') {
+    return;
   }
-  // For all other requests, don't intercept
+
+  // For API calls, don't intercept - let them fail naturally
+  if (url.pathname.startsWith('/api/')) {
+    return;
+  }
+
+  event.respondWith(
+    caches.match(request)
+      .then((cachedResponse) => {
+        // Return cached version if available
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+
+        // For same-origin requests, try network first, then cache
+        if (url.origin === self.location.origin) {
+          return fetch(request)
+            .then((response) => {
+              // Only cache successful responses to static assets
+              if (response.ok && 
+                  (request.url.includes('.js') || 
+                   request.url.includes('.css') || 
+                   request.url.includes('.svg') ||
+                   request.url.includes('.png') ||
+                   request.url.includes('.jpg') ||
+                   request.url.includes('.ico'))) {
+                
+                const responseToCache = response.clone();
+                caches.open(CACHE_NAME)
+                  .then((cache) => {
+                    cache.put(request, responseToCache);
+                  });
+              }
+              return response;
+            })
+            .catch(() => {
+              // If network fails for HTML requests, serve offline page
+              if (request.headers.get('accept')?.includes('text/html')) {
+                return caches.match('/offline.html');
+              }
+              // For other assets, return error
+              return new Response('Offline', { status: 503 });
+            });
+        }
+
+        // For external resources (like images), try network
+        return fetch(request);
+      })
+      .catch(() => {
+        // Final fallback for HTML requests
+        if (request.headers.get('accept')?.includes('text/html')) {
+          return caches.match('/offline.html');
+        }
+        return new Response('Offline', { status: 503 });
+      })
+  );
 });
 
 // Handle background sync for offline operations

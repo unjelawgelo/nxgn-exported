@@ -19,6 +19,8 @@ interface Playlist {
   id: string
   name: string
   description?: string
+  category?: string
+  date?: string
   ministryId: string
   createdBy: string
 }
@@ -59,6 +61,11 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
   const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [contentFontSize, setContentFontSize] = useState(15)
+
+  // Filter state
+  const [filterCategory, setFilterCategory] = useState('All')
+  const [filterYear, setFilterYear] = useState(new Date().getFullYear().toString())
+  const [filterMonth, setFilterMonth] = useState((new Date().getMonth() + 1).toString())
   const [displayMode, setDisplayMode] = useState<'line-up' | 'lyrics' | 'chords'>('line-up')
   const [songKeys, setSongKeys] = useState<Record<string, string>>({})
   const [showChords, setShowChords] = useState<Record<string, boolean>>({})
@@ -146,6 +153,8 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
   // Form state
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [category, setCategory] = useState('Sunday Service')
+  const [date, setDate] = useState('')
 
   const canEdit = user.role === 'main_admin' || user.role === 'sub_admin'
   const notifications = useNotifications()
@@ -186,6 +195,20 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
     loadPlaylists()
     loadSongs()
   }, [loadPlaylists, loadSongs])
+
+  // Reset month filter when year changes
+  useEffect(() => {
+    if (filterYear) {
+      const currentYear = new Date().getFullYear().toString()
+      if (filterYear === currentYear) {
+        // If current year is selected, set to current month
+        setFilterMonth((new Date().getMonth() + 1).toString())
+      } else {
+        // If different year is selected, reset to all months
+        setFilterMonth('')
+      }
+    }
+  }, [filterYear])
 
   const loadPlaylistSongs = async (playlistId: string) => {
     try {
@@ -240,14 +263,26 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
 
   const handleAddPlaylist = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name || !ministryId) return
+    if (!date || !ministryId) return
+    
+    // Convert mm/dd/yyyy to ISO format for database
+    let isoDate = date
+    if (date.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+      const [month, day, year] = date.split('/')
+      isoDate = `${year}-${month}-${day}`
+    }
+    
+    // Auto-generate name if empty
+    const finalName = name || generateWeekName(isoDate)
 
     setLoading(true)
     try {
       const newPlaylist = {
         id: `playlist-${Date.now()}`,
-        name,
+        name: finalName,
         description,
+        category,
+        date: isoDate,
         ministryId,
         createdBy: user.id
       }
@@ -282,13 +317,25 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
 
   const handleEditPlaylist = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name || !editingPlaylist) return
+    if (!editingPlaylist) return
+    
+    // Convert mm/dd/yyyy to ISO format for database
+    let isoDate = date
+    if (date && date.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+      const [month, day, year] = date.split('/')
+      isoDate = `${year}-${month}-${day}`
+    }
+    
+    // Auto-generate name if empty and date is provided
+    const finalName = name || (isoDate ? generateWeekName(isoDate) : editingPlaylist.name)
 
     setLoading(true)
     try {
       const updatedPlaylist = {
-        name,
-        description
+        name: finalName,
+        description,
+        category,
+        date: isoDate
       }
 
       await blink.db.playlists.update(editingPlaylist.id, updatedPlaylist)
@@ -562,12 +609,45 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
   const resetForm = () => {
     setName('')
     setDescription('')
+    setCategory('Sunday Service')
+    setDate('')
+  }
+
+  const generateWeekName = (dateString: string) => {
+    if (!dateString) return ''
+    
+    const date = new Date(dateString)
+    const month = date.toLocaleDateString('en-US', { month: 'long' })
+    const day = date.getDate()
+    const firstDayOfMonth = new Date(date.getFullYear(), date.getMonth(), 1)
+    const dayOfWeek = firstDayOfMonth.getDay()
+    const weekNumber = Math.ceil((day + dayOfWeek) / 7)
+    
+    const ordinal = (n: number) => {
+      const s = ['th', 'st', 'nd', 'rd']
+      const v = n % 100
+      return s[(v - 20) % 10] || s[v] || s[0]
+    }
+    
+    return `${month}: ${weekNumber}${ordinal(weekNumber)} Week`
   }
 
   const openEditModal = (playlist: Playlist) => {
     setEditingPlaylist(playlist)
     setName(playlist.name)
     setDescription(playlist.description || '')
+    setCategory(playlist.category || 'Sunday Service')
+    
+    // Convert ISO date to mm/dd/yyyy format for display
+    if (playlist.date) {
+      const date = new Date(playlist.date)
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      const year = date.getFullYear()
+      setDate(`${month}/${day}/${year}`)
+    } else {
+      setDate('')
+    }
   }
 
   const selectPlaylist = (playlist: Playlist) => {
@@ -646,9 +726,28 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
                 Back to Setlists
               </button>
               <h2 className="text-xl font-semibold text-foreground">{selectedPlaylist.name}</h2>
-              {selectedPlaylist.description && (
-                <p className="text-muted-foreground text-sm">{selectedPlaylist.description}</p>
-              )}
+              <div className="flex items-center gap-2 mt-2">
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  selectedPlaylist.category === 'Youth Service' 
+                    ? 'bg-purple-500/20 text-purple-400' 
+                    : selectedPlaylist.category === 'Sunday Service'
+                    ? 'bg-blue-500/20 text-blue-400'
+                    : selectedPlaylist.category === 'Other Event'
+                    ? 'bg-green-500/20 text-green-400'
+                    : 'bg-gray-500/20 text-gray-400'
+                }`}>
+                  {selectedPlaylist.category || 'Uncategorized'}
+                </span>
+                {selectedPlaylist.date ? (
+                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-500/20 text-orange-400">
+                    {new Date(selectedPlaylist.date).toLocaleDateString('en-US')}
+                  </span>
+                ) : (
+                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-500/20 text-gray-400">
+                    No Date
+                  </span>
+                )}
+              </div>
             </div>
             
             {canEdit && (
@@ -1126,7 +1225,7 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
                       <p>No songs found for "{searchQuery}"</p>
                     </div>
                   ) : (
-                    <div className="space-y-1 max-h-96 overflow-y-auto">
+                    <div className="space-y-1 max-h-[32rem] overflow-y-auto">
                       {availableSongs
                         .filter(song => 
                           song.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1272,6 +1371,95 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
         )}
       </div>
 
+      {/* Search and Filters */}
+      <div className="mb-4 space-y-3">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search setlists..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+          />
+        </div>
+        
+        {/* Filter Dropdowns - Dynamic based on data */}
+        <style>{`
+          .custom-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 9L2 5h8z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            padding-right: 24px !important;
+          }
+        `}</style>
+        <div className="flex gap-2 overflow-x-auto">
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="px-2 py-1.5 bg-background border border-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary custom-select"
+          >
+            <option value="All">All</option>
+            {[...new Set(playlists
+              .filter(p => {
+                if (filterYear && filterMonth) {
+                  if (p.date) {
+                    const playlistDate = new Date(p.date)
+                    return playlistDate.getFullYear().toString() === filterYear && 
+                           (playlistDate.getMonth() + 1).toString() === filterMonth
+                  }
+                  return false
+                }
+                return true
+              })
+              .map(p => p.category)
+              .filter(Boolean)
+            )].sort().map(cat => (
+              <option key={cat} value={cat}>
+                {cat === 'Sunday Service' ? 'Sunday' : cat === 'Youth Service' ? 'YS' : cat}
+              </option>
+            ))}
+          </select>
+          
+          <select
+            value={filterYear}
+            onChange={(e) => setFilterYear(e.target.value)}
+            className="px-2 py-1.5 bg-background border border-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary custom-select"
+          >
+            <option value="">All Years</option>
+            {[...new Set(playlists.filter(p => p.date).map(p => new Date(p.date).getFullYear().toString()))].sort().map(year => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
+          
+          <select
+            value={filterMonth}
+            onChange={(e) => setFilterMonth(e.target.value)}
+            className="px-2 py-1.5 bg-background border border-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary custom-select"
+          >
+            <option value="">All Months</option>
+            {[...new Set(playlists
+              .filter(p => {
+                if (filterYear) {
+                  if (p.date) {
+                    const playlistDate = new Date(p.date)
+                    return playlistDate.getFullYear().toString() === filterYear
+                  }
+                  return false
+                }
+                return true
+              })
+              .map(p => (new Date(p.date).getMonth() + 1).toString())
+            )].sort((a,b) => parseInt(a) - parseInt(b)).map(month => {
+              const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December']
+              return <option key={month} value={month}>{monthNames[parseInt(month)-1]}</option>
+            })}
+          </select>
+        </div>
+      </div>
+
       {/* Playlists Grid */}
       <div className="flex-1 overflow-y-auto">
         {playlists.length === 0 ? (
@@ -1282,7 +1470,36 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
           </div>
         ) : (
           <div className="grid gap-4">
-            {playlists.map((playlist) => (
+            {playlists
+              .filter((playlist) => {
+                // Search filter
+                const matchesSearch = !searchQuery || 
+                  playlist.name.toLowerCase().includes(searchQuery.toLowerCase())
+                
+                // Category filter
+                const matchesCategory = filterCategory === 'All' || 
+                  playlist.category === filterCategory
+                
+                // Year and Month filter
+                let matchesDate = true
+                if (filterYear || filterMonth) {
+                  if (playlist.date) {
+                    const playlistDate = new Date(playlist.date)
+                    const matchesYear = !filterYear || playlistDate.getFullYear().toString() === filterYear
+                    const matchesMonth = !filterMonth || (playlistDate.getMonth() + 1).toString() === filterMonth
+                    matchesDate = matchesYear && matchesMonth
+                  } else {
+                    // If playlist has no date but filters are set, don't show it
+                    matchesDate = false
+                  }
+                } else {
+                  // If no date filters are selected, show all playlists (including those without dates)
+                  matchesDate = true
+                }
+                
+                return matchesSearch && matchesCategory && matchesDate
+              })
+              .map((playlist) => (
               <div
                 key={playlist.id}
                 className="bg-card border border-border rounded-lg p-4 hover:bg-muted/50 transition-colors cursor-pointer"
@@ -1291,9 +1508,28 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <h3 className="font-medium text-foreground mb-1">{playlist.name}</h3>
-                    {playlist.description && (
-                      <p className="text-sm text-muted-foreground">{playlist.description}</p>
-                    )}
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        playlist.category === 'Youth Service' 
+                          ? 'bg-purple-500/20 text-purple-400' 
+                          : playlist.category === 'Sunday Service'
+                          ? 'bg-blue-500/20 text-blue-400'
+                          : playlist.category === 'Other Event'
+                          ? 'bg-green-500/20 text-green-400'
+                          : 'bg-gray-500/20 text-gray-400'
+                      }`}>
+                        {playlist.category || 'Uncategorized'}
+                      </span>
+                      {playlist.date ? (
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-500/20 text-orange-400">
+                          {new Date(playlist.date).toLocaleDateString('en-US')}
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-500/20 text-gray-400">
+                          No Date
+                        </span>
+                      )}
+                    </div>
                   </div>
                   
                   {canEdit && (
@@ -1322,6 +1558,30 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
                 </div>
               </div>
             ))}
+            {playlists.filter((playlist) => {
+              const matchesSearch = !searchQuery || 
+                playlist.name.toLowerCase().includes(searchQuery.toLowerCase())
+              const matchesCategory = filterCategory === 'All' || 
+                playlist.category === filterCategory
+              let matchesDate = true
+              if (filterYear || filterMonth) {
+                if (playlist.date) {
+                  const playlistDate = new Date(playlist.date)
+                  const matchesYear = !filterYear || playlistDate.getFullYear().toString() === filterYear
+                  const matchesMonth = !filterMonth || (playlistDate.getMonth() + 1).toString() === filterMonth
+                  matchesDate = matchesYear && matchesMonth
+                } else {
+                  matchesDate = false
+                }
+              }
+              return matchesSearch && matchesCategory && matchesDate
+            }).length === 0 && (
+              <div className="flex flex-col items-center justify-center h-64 text-center">
+                <Search className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">No Setlists Found</h3>
+                <p className="text-muted-foreground mb-4">Try adjusting your filters or search query</p>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1336,14 +1596,71 @@ export default function PlaylistManager({ user, ministryId }: PlaylistManagerPro
             
             <form onSubmit={editingPlaylist ? handleEditPlaylist : handleAddPlaylist} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Name</label>
+                <label className="block text-sm font-medium text-foreground mb-2">Name (Optional)</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  placeholder="Auto-generated from date"
+                  className="w-full p-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                />
+                <p className="text-xs text-muted-foreground mt-1">Leave empty to auto-generate from date (e.g., "May: 1st Week")</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">Category</label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full p-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent custom-select"
+                >
+                  <option value="Sunday Service">Sunday Service</option>
+                  <option value="Youth Service">Youth Service</option>
+                  <option value="Other Event">Other Event</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">Date * (mm/dd/yyyy)</label>
+                <input
+                  type="text"
+                  value={date}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    // Only allow numbers and slashes
+                    const cleanValue = value.replace(/[^\d\/]/g, '')
+                    
+                    // Auto-format as mm/dd/yyyy
+                    if (cleanValue.length <= 10) {
+                      let formatted = cleanValue
+                      if (cleanValue.length >= 3 && cleanValue[2] !== '/') {
+                        formatted = cleanValue.slice(0, 2) + '/' + cleanValue.slice(2)
+                      }
+                      if (cleanValue.length >= 6 && cleanValue[5] !== '/') {
+                        formatted = formatted.slice(0, 5) + '/' + formatted.slice(5)
+                      }
+                      
+                      setDate(formatted)
+                      
+                      // Auto-generate name if valid date
+                      if (formatted.length === 10 && formatted.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+                        const [month, day, year] = formatted.split('/')
+                        const isoDate = `${year}-${month}-${day}`
+                        if (!name || name === '') {
+                          setName(generateWeekName(isoDate))
+                        }
+                      }
+                    }
+                  }}
+                  placeholder="mm/dd/yyyy"
                   className="w-full p-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   required
                 />
+                {date && date.length === 10 && date.match(/^\d{2}\/\d{2}\/\d{4}$/) && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Selected: {new Date(date.split('/')[2] + '-' + date.split('/')[0] + '-' + date.split('/')[1]).toLocaleDateString('en-US')}
+                  </p>
+                )}
               </div>
 
               <div>

@@ -9,11 +9,11 @@ router.post('/', async (req, res) => {
   try {
     const id = uuidv4();
     const now = new Date().toISOString();
-    const { name, description, ministryId, createdBy } = req.body;
+    const { name, description, category, date, ministryId, createdBy } = req.body;
     await query(
-      `insert into playlists (id, name, description, ministry_id, created_by, created_at, updated_at)
-       values ($1,$2,$3,$4,$5,$6,$7)`,
-      [id, name, description, ministryId, createdBy, now, now]
+      `insert into playlists (id, name, description, category, date, ministry_id, created_by, created_at, updated_at)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      [id, name, description, category, date, ministryId, createdBy, now, now]
     );
     const { rows } = await query('select * from playlists where id=$1', [id]);
     res.status(201).json(toCamel(rows[0]));
@@ -37,7 +37,7 @@ router.get('/', async (req, res) => {
 // Update playlist
 router.patch('/:id', async (req, res) => {
   try {
-    const fields = ['name','description'];
+    const fields = ['name','description','category','date'];
     const sets = [];
     const values = [];
     let i = 1;
@@ -75,6 +75,8 @@ function toCamel(row){
     id: row.id,
     name: row.name,
     description: row.description,
+    category: row.category,
+    date: row.date,
     ministryId: row.ministry_id,
     createdBy: row.created_by,
     createdAt: row.created_at?.toISOString?.() ?? row.created_at,

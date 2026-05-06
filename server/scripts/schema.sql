@@ -41,6 +41,8 @@ create table if not exists playlists (
   id text primary key,
   name text not null,
   description text,
+  category text,
+  date text,
   ministry_id text not null references ministries(id) on delete cascade,
   created_by text references users(id) on delete set null,
   created_at timestamptz default now(),

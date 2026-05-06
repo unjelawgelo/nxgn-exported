@@ -2,8 +2,7 @@ const CACHE_NAME = 'nxgen-v1';
 const STATIC_CACHE = [
   '/',
   '/index.html',
-  '/offline.html',
-  'https://firebasestorage.googleapis.com/v0/b/blink-451505.firebasestorage.app/o/user-uploads%2FhhSSa5W1LyWiXUx8UIqiDL2RCSI3%2FB5i0b5ZE_400x400__27201fe1.jpg?alt=media&token=8c412c5e-df3e-4ae6-90aa-f004d3e8f016'
+  '/offline.html'
 ];
 
 // Install event - cache static assets

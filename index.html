@@ -34,9 +34,18 @@
           navigator.serviceWorker.register('/sw.js')
             .then((registration) => {
               console.log('SW registered: ', registration);
+              
+              // Check for updates periodically
+              setInterval(() => {
+                registration.update().then(() => {
+                  console.log('SW updated');
+                });
+              }, 60 * 60 * 1000); // Check every hour
             })
             .catch((registrationError) => {
               console.log('SW registration failed: ', registrationError);
+              // Continue without service worker if registration fails
+              console.log('App will work without service worker');
             });
         });
       }
